@@ -70,3 +70,80 @@ def test_saved_sites_endpoints_create_list_and_delete(monkeypatch, tmp_path):
     assert delete_response.status_code == 200
     assert delete_response.json()["deleted"] is True
     assert empty_list_response.json() == []
+
+
+def test_check_all_saved_sites_returns_empty_summary(monkeypatch, tmp_path):
+    db_path = tmp_path / "sites.db"
+    monkeypatch.setattr(storage, "DATABASE_PATH", db_path)
+
+    client = TestClient(app)
+    response = client.post("/api/sites/check-all")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "total": 0,
+        "up": 0,
+        "down": 0,
+        "results": [],
+    }
+
+
+def test_check_all_saved_sites_checks_each_site_and_saves_history(monkeypatch, tmp_path):
+    db_path = tmp_path / "sites.db"
+    monkeypatch.setattr(storage, "DATABASE_PATH", db_path)
+
+    def fake_check_website(url):
+        is_example = url == "https://example.com"
+        return {
+            "input_url": url,
+            "normalized_url": url,
+            "final_url": url if is_example else None,
+            "hostname": "example.com" if is_example else "down.example",
+            "status_code": 200 if is_example else None,
+            "is_up": is_example,
+            "response_time_ms": 42 if is_example else None,
+            "ip_addresses": ["93.184.216.34"] if is_example else [],
+            "checked_at": "2026-06-23T12:00:00+00:00",
+            "error": None if is_example else "DNS lookup failed",
+        }
+
+    monkeypatch.setattr("app.main.check_website", fake_check_website)
+
+    client = TestClient(app)
+    first_site = client.post(
+        "/api/sites",
+        json={
+            "url": "example.com",
+            "name": "Example",
+        },
+    ).json()
+    second_site = client.post(
+        "/api/sites",
+        json={
+            "url": "down.example",
+            "name": "Down Site",
+        },
+    ).json()
+
+    response = client.post("/api/sites/check-all")
+    history_response = client.get("/api/history?limit=5")
+
+    assert response.status_code == 200
+    summary = response.json()
+    assert summary["total"] == 2
+    assert summary["up"] == 1
+    assert summary["down"] == 1
+    assert [result["site_id"] for result in summary["results"]] == [
+        second_site["id"],
+        first_site["id"],
+    ]
+    assert summary["results"][0]["name"] == "Down Site"
+    assert summary["results"][0]["is_up"] is False
+    assert summary["results"][0]["error"] == "DNS lookup failed"
+    assert summary["results"][1]["name"] == "Example"
+    assert summary["results"][1]["is_up"] is True
+
+    history = history_response.json()
+    assert len(history) == 2
+    assert history[0]["normalized_url"] == "https://example.com"
+    assert history[1]["normalized_url"] == "https://down.example"

@@ -20,6 +20,7 @@ Completed so far:
 * SQLite-backed check history
 * `GET /api/history` endpoint
 * Saved monitored sites/watchlist backend endpoints
+* Backend check-all endpoint for saved monitored sites
 * Basic React frontend website check form
 * React frontend recent history display
 * Polished React frontend layout for readability and responsiveness
@@ -28,7 +29,7 @@ Completed so far:
 
 Next planned milestone:
 
-* Add check-all support for saved monitored sites
+* Add a frontend Check All Saved Sites button and dashboard summary
 
 ## Features
 
@@ -46,7 +47,10 @@ Currently implemented:
 
   * `GET /api/sites`
   * `POST /api/sites`
+  * `POST /api/sites/check-all`
   * `DELETE /api/sites/{site_id}`
+
+* Backend endpoint for checking every saved monitored site and storing each result in history
 
 * React frontend form for submitting website checks
 
@@ -85,7 +89,7 @@ Currently implemented:
 
 Planned features:
 
-* Check all saved monitored sites
+* Frontend Check All Saved Sites button and dashboard summary
 * Screenshots
 * Deployment notes
 
@@ -368,6 +372,48 @@ Example response:
 }
 ```
 
+```text
+POST /api/sites/check-all
+```
+
+Checks every saved monitored site, stores each result in check history, and returns a summary.
+
+Example response:
+
+```json
+{
+  "total": 2,
+  "up": 1,
+  "down": 1,
+  "results": [
+    {
+      "site_id": 1,
+      "name": "Example",
+      "url": "example.com",
+      "normalized_url": "https://example.com",
+      "hostname": "example.com",
+      "is_up": true,
+      "status_code": 200,
+      "response_time_ms": 123,
+      "error": null,
+      "checked_at": "2026-06-23T18:45:00.000000+00:00"
+    },
+    {
+      "site_id": 2,
+      "name": "Offline Example",
+      "url": "offline.example",
+      "normalized_url": "https://offline.example",
+      "hostname": "offline.example",
+      "is_up": false,
+      "status_code": null,
+      "response_time_ms": null,
+      "error": "[Errno 11001] getaddrinfo failed",
+      "checked_at": "2026-06-23T18:45:01.000000+00:00"
+    }
+  ]
+}
+```
+
 ## Local Data
 
 Website check history is stored locally in a SQLite database.
@@ -396,6 +442,7 @@ Milestone order:
 6. UI polish
 7. Backend saved-sites/watchlist API
 8. Frontend saved-sites/watchlist UI
-9. Check all saved monitored sites
-10. Screenshots
-11. Deployment documentation
+9. Backend check-all saved sites API
+10. Frontend Check All Saved Sites button and dashboard summary
+11. Screenshots
+12. Deployment documentation

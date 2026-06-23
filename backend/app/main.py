@@ -51,9 +51,7 @@ def health_check():
 
 @app.post("/api/check")
 def check_site(request: WebsiteCheckRequest):
-    result = check_website(request.url)
-    storage.save_check_result(result)
-    return result
+    return _check_and_save(request.url)
 
 
 @app.get("/api/history")
@@ -64,6 +62,38 @@ def check_history(limit: int = Query(default=20, ge=1, le=100)):
 @app.get("/api/sites")
 def list_saved_sites():
     return storage.get_saved_sites()
+
+
+@app.post("/api/sites/check-all")
+def check_all_saved_sites():
+    sites = storage.get_saved_sites()
+    results = []
+
+    for site in sites:
+        check_result = _check_and_save(site["normalized_url"])
+        results.append(
+            {
+                "site_id": site["id"],
+                "name": site["name"],
+                "url": site["url"],
+                "normalized_url": site["normalized_url"],
+                "hostname": site["hostname"],
+                "is_up": check_result["is_up"],
+                "status_code": check_result["status_code"],
+                "response_time_ms": check_result["response_time_ms"],
+                "error": check_result["error"],
+                "checked_at": check_result["checked_at"],
+            }
+        )
+
+    up_count = sum(1 for result in results if result["is_up"])
+
+    return {
+        "total": len(results),
+        "up": up_count,
+        "down": len(results) - up_count,
+        "results": results,
+    }
 
 
 @app.post("/api/sites")
@@ -97,3 +127,9 @@ def delete_saved_site(site_id: int):
         "deleted": True,
         "site": deleted_site,
     }
+
+
+def _check_and_save(url: str):
+    result = check_website(url)
+    storage.save_check_result(result)
+    return result
