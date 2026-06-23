@@ -19,6 +19,12 @@ def test_save_check_result_and_get_recent_checks(tmp_path):
         "status_label": "healthy",
         "failure_type": None,
         "failure_stage": None,
+        "dns_status": "resolved",
+        "connection_status": "connected",
+        "http_status": "response_received",
+        "diagnostic_summary": (
+            "DNS resolved, connection established, and the HTTP response was healthy."
+        ),
     }
     second_result = {
         "input_url": "bad-url",
@@ -34,6 +40,10 @@ def test_save_check_result_and_get_recent_checks(tmp_path):
         "status_label": "invalid_url",
         "failure_type": "invalid_url",
         "failure_stage": "validation",
+        "dns_status": "not_checked",
+        "connection_status": "not_checked",
+        "http_status": "not_attempted",
+        "diagnostic_summary": "The URL could not be checked because it is invalid.",
     }
 
     first_id = storage.save_check_result(first_result, db_path)
@@ -47,11 +57,18 @@ def test_save_check_result_and_get_recent_checks(tmp_path):
     assert checks[0]["status_label"] == "invalid_url"
     assert checks[0]["failure_type"] == "invalid_url"
     assert checks[0]["failure_stage"] == "validation"
+    assert checks[0]["dns_status"] == "not_checked"
+    assert checks[0]["connection_status"] == "not_checked"
+    assert checks[0]["http_status"] == "not_attempted"
+    assert checks[0]["diagnostic_summary"] == "The URL could not be checked because it is invalid."
     assert checks[0]["error"] == "URL must include a valid hostname."
     assert checks[1]["ip_addresses"] == ["93.184.216.34"]
     assert checks[1]["status_label"] == "healthy"
     assert checks[1]["failure_type"] is None
     assert checks[1]["failure_stage"] is None
+    assert checks[1]["dns_status"] == "resolved"
+    assert checks[1]["connection_status"] == "connected"
+    assert checks[1]["http_status"] == "response_received"
 
 
 def test_initialize_database_migrates_old_check_history_table(tmp_path):
@@ -111,6 +128,10 @@ def test_initialize_database_migrates_old_check_history_table(tmp_path):
     assert checks[0]["status_label"] == "healthy"
     assert checks[0]["failure_type"] is None
     assert checks[0]["failure_stage"] is None
+    assert checks[0]["dns_status"] == "not_checked"
+    assert checks[0]["connection_status"] == "not_checked"
+    assert checks[0]["http_status"] == "not_attempted"
+    assert checks[0]["diagnostic_summary"] == "The saved check completed successfully."
 
 
 def test_get_recent_checks_respects_limit(tmp_path):

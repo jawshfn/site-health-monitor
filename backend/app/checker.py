@@ -44,6 +44,10 @@ def check_website(url: str) -> dict[str, Any]:
         "status_label": "unknown_error",
         "failure_type": "unknown_error",
         "failure_stage": "unknown",
+        "dns_status": "not_checked",
+        "connection_status": "not_checked",
+        "http_status": "not_attempted",
+        "diagnostic_summary": "The check did not complete.",
     }
 
     try:
@@ -57,6 +61,11 @@ def check_website(url: str) -> dict[str, Any]:
         result["normalized_url"] = normalized_url
         result["hostname"] = hostname
         result["ip_addresses"] = _resolve_hostname(hostname)
+        result["dns_status"] = "resolved"
+
+        port = 443 if parsed.scheme == "https" else 80
+        _check_tcp_connection(hostname, port)
+        result["connection_status"] = "connected"
 
         start_time = time.perf_counter()
         response = httpx.get(normalized_url, follow_redirects=True, timeout=5.0)
@@ -70,16 +79,37 @@ def check_website(url: str) -> dict[str, Any]:
         result["status_label"] = "healthy" if is_healthy else "http_error"
         result["failure_type"] = None if is_healthy else "http_error"
         result["failure_stage"] = None if is_healthy else "http"
+        result["http_status"] = "response_received"
+        result["diagnostic_summary"] = (
+            "DNS resolved, connection established, and the HTTP response was healthy."
+            if is_healthy
+            else f"The server responded with HTTP {response.status_code}."
+        )
     except ValueError as exc:
         result["error"] = str(exc)
         result["status_label"] = "invalid_url"
         result["failure_type"] = "invalid_url"
         result["failure_stage"] = "validation"
+        result["diagnostic_summary"] = "The URL could not be checked because it is invalid."
     except socket.gaierror as exc:
         result["error"] = f"DNS lookup failed: {exc}"
         result["status_label"] = "dns_error"
         result["failure_type"] = "dns_error"
         result["failure_stage"] = "dns"
+        result["dns_status"] = "failed"
+        result["connection_status"] = "not_checked"
+        result["http_status"] = "not_attempted"
+        result["diagnostic_summary"] = "DNS lookup failed, so no connection attempt was made."
+    except (socket.timeout, TimeoutError, OSError) as exc:
+        result["error"] = f"Connection failed: {exc}"
+        result["status_label"] = "connection_error"
+        result["failure_type"] = "connection_error"
+        result["failure_stage"] = "connection"
+        result["connection_status"] = "failed"
+        result["http_status"] = "not_attempted"
+        result["diagnostic_summary"] = (
+            "DNS resolved, but the TCP connection could not be established."
+        )
     except httpx.TimeoutException as exc:
         result["error"] = "No HTTP response was received before the timeout."
         if start_time is not None:
@@ -87,6 +117,10 @@ def check_website(url: str) -> dict[str, Any]:
         result["status_label"] = "timeout"
         result["failure_type"] = "timeout"
         result["failure_stage"] = "http"
+        result["http_status"] = "timeout"
+        result["diagnostic_summary"] = (
+            "DNS resolved and connection established, but the HTTP request timed out."
+        )
     except httpx.ConnectError as exc:
         result["error"] = f"Connection failed: {exc}"
         if start_time is not None:
@@ -94,6 +128,10 @@ def check_website(url: str) -> dict[str, Any]:
         result["status_label"] = "connection_error"
         result["failure_type"] = "connection_error"
         result["failure_stage"] = "connection"
+        result["http_status"] = "failed"
+        result["diagnostic_summary"] = (
+            "DNS resolved and connection established, but the HTTP request failed."
+        )
     except httpx.NetworkError as exc:
         result["error"] = f"Connection failed: {exc}"
         if start_time is not None:
@@ -101,11 +139,16 @@ def check_website(url: str) -> dict[str, Any]:
         result["status_label"] = "connection_error"
         result["failure_type"] = "connection_error"
         result["failure_stage"] = "connection"
+        result["http_status"] = "failed"
+        result["diagnostic_summary"] = (
+            "DNS resolved and connection established, but the HTTP request failed."
+        )
     except Exception as exc:
         result["error"] = str(exc)
         result["status_label"] = "unknown_error"
         result["failure_type"] = "unknown_error"
         result["failure_stage"] = "unknown"
+        result["diagnostic_summary"] = "This checker encountered an unexpected error."
 
     return result
 
@@ -119,3 +162,8 @@ def _resolve_hostname(hostname: str) -> list[str]:
         resolved_ips.add(str(ip_address))
 
     return sorted(resolved_ips)
+
+
+def _check_tcp_connection(hostname: str, port: int, timeout: float = 3.0) -> None:
+    with socket.create_connection((hostname, port), timeout=timeout):
+        return

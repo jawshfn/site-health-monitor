@@ -683,6 +683,10 @@ function CheckAllSummary({ summary }) {
                   <dt>Error</dt>
                   <dd>{result.error ?? "None"}</dd>
                 </div>
+                <div>
+                  <dt>Diagnostics</dt>
+                  <dd>{result.diagnostic_summary ?? "Not available"}</dd>
+                </div>
               </dl>
             </div>
           ))}
@@ -803,6 +807,19 @@ function ResultCard({ result }) {
         />
       </div>
 
+      <div className="diagnostics-box" aria-label="Reachability diagnostics">
+        <h3>Reachability Diagnostics</h3>
+        <div className="diagnostics-grid">
+          <SummaryItem label="DNS" value={formatDiagnosticStatus(result.dns_status)} />
+          <SummaryItem
+            label="Connection"
+            value={formatDiagnosticStatus(result.connection_status)}
+          />
+          <SummaryItem label="HTTP" value={formatDiagnosticStatus(result.http_status)} />
+        </div>
+        <p>{result.diagnostic_summary ?? "No diagnostic summary is available."}</p>
+      </div>
+
       <dl className="result-grid">
         <ResultRow label="Input URL" value={result.input_url} />
         <ResultRow label="Normalized URL" value={result.normalized_url} />
@@ -890,7 +907,7 @@ function HistoryTable({ history }) {
             <th scope="col">HTTP</th>
             <th scope="col">Time</th>
             <th scope="col">Checked</th>
-            <th scope="col">Error</th>
+            <th scope="col">Details</th>
           </tr>
         </thead>
         <tbody>
@@ -906,8 +923,8 @@ function HistoryTable({ history }) {
               <td data-label="HTTP">{formatHttpStatus(check)}</td>
               <td data-label="Time">{formatResponseTime(check.response_time_ms) ?? "Not available"}</td>
               <td data-label="Checked">{formatDate(check.checked_at) ?? "Not available"}</td>
-              <td data-label="Error" className="error-cell">
-                {check.error ?? "None"}
+              <td data-label="Details" className="error-cell">
+                {check.diagnostic_summary ?? check.error ?? "None"}
               </td>
             </tr>
           ))}
@@ -961,6 +978,20 @@ function formatHttpStatus(result) {
   }
 
   return result.status_code;
+}
+
+function formatDiagnosticStatus(value) {
+  const labels = {
+    resolved: "Resolved",
+    failed: "Failed",
+    connected: "Connected",
+    response_received: "Response Received",
+    timeout: "Timed Out",
+    not_checked: "Not Checked",
+    not_attempted: "Not Attempted",
+  };
+
+  return labels[value] ?? "Not Available";
 }
 
 function getStatusText(result) {

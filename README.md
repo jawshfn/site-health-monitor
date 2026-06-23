@@ -1,6 +1,6 @@
 # Site Health Monitor
 
-Site Health Monitor is a full-stack web app for checking website availability from a local HTTP checker, including response time, redirects, observed result type, and DNS/IP information. Users can run one-time checks, save monitored sites, check all saved sites at once, and review saved check history through a React dashboard backed by a FastAPI API and SQLite storage.
+Site Health Monitor is a full-stack web app for checking website availability from a local HTTP checker, including response time, redirects, observed result type, reachability diagnostics, and DNS/IP information. Users can run one-time checks, save monitored sites, check all saved sites at once, and review saved check history through a React dashboard backed by a FastAPI API and SQLite storage.
 
 ## Screenshots
 
@@ -10,6 +10,7 @@ Screenshots coming soon.
 
 * Check website availability, HTTP status, response time, redirects, and DNS/IP information
 * Classify observed results as healthy, HTTP error, timeout, DNS failure, connection failure, invalid URL, or unknown error
+* Explain multi-stage reachability diagnostics for DNS, TCP connection, and HTTP response stages
 * View dashboard summary cards for saved sites, total checks, latest healthy/issues counts, and average response time
 * Automatically normalize URLs, such as converting `example.com` to `https://example.com`
 * Save monitored sites in a local watchlist
@@ -132,6 +133,10 @@ Example website check response:
   "status_label": "healthy",
   "failure_type": null,
   "failure_stage": null,
+  "dns_status": "resolved",
+  "connection_status": "connected",
+  "http_status": "response_received",
+  "diagnostic_summary": "DNS resolved, connection established, and the HTTP response was healthy.",
   "status_code": 200,
   "response_time_ms": 123,
   "ip_addresses": ["93.184.216.34"],

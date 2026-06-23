@@ -516,6 +516,32 @@ button:disabled {
   margin-bottom: 18px;
 }
 
+.diagnostics-box {
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 18px;
+  padding: 16px;
+}
+
+.diagnostics-box h3 {
+  color: #111827;
+  font-size: 1rem;
+  margin: 0 0 12px;
+}
+
+.diagnostics-box p {
+  color: #526176;
+  line-height: 1.45;
+  margin: 12px 0 0;
+}
+
+.diagnostics-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .summary-item {
   background: #f7fafc;
   border: 1px solid #e2e8f0;
@@ -635,6 +661,7 @@ dd {
 
   .form-row,
   .dashboard-grid,
+  .diagnostics-grid,
   .result-row,
   .result-summary,
   .saved-site-form,

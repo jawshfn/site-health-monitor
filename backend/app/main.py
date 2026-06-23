@@ -112,6 +112,10 @@ def check_all_saved_sites():
                 "status_label": check_result.get("status_label"),
                 "failure_type": check_result.get("failure_type"),
                 "failure_stage": check_result.get("failure_stage"),
+                "dns_status": check_result.get("dns_status"),
+                "connection_status": check_result.get("connection_status"),
+                "http_status": check_result.get("http_status"),
+                "diagnostic_summary": check_result.get("diagnostic_summary"),
                 "status_code": check_result["status_code"],
                 "response_time_ms": check_result["response_time_ms"],
                 "error": check_result["error"],
@@ -188,3 +192,12 @@ def _add_status_defaults(result: dict):
     result.setdefault("status_label", "healthy" if is_up else "unknown_error")
     result.setdefault("failure_type", None if is_up else "unknown_error")
     result.setdefault("failure_stage", None if is_up else "unknown")
+    result.setdefault("dns_status", "not_checked")
+    result.setdefault("connection_status", "not_checked")
+    result.setdefault("http_status", "not_attempted")
+    result.setdefault(
+        "diagnostic_summary",
+        "The check completed successfully."
+        if is_up
+        else "This checker observed an issue with the request.",
+    )

@@ -33,6 +33,10 @@ def initialize_database(db_path: Path | str | None = None) -> None:
                 status_label TEXT,
                 failure_type TEXT,
                 failure_stage TEXT,
+                dns_status TEXT,
+                connection_status TEXT,
+                http_status TEXT,
+                diagnostic_summary TEXT,
                 checked_at TEXT NOT NULL
             )
             """
@@ -40,6 +44,10 @@ def initialize_database(db_path: Path | str | None = None) -> None:
         _ensure_column(connection, "website_checks", "status_label", "TEXT")
         _ensure_column(connection, "website_checks", "failure_type", "TEXT")
         _ensure_column(connection, "website_checks", "failure_stage", "TEXT")
+        _ensure_column(connection, "website_checks", "dns_status", "TEXT")
+        _ensure_column(connection, "website_checks", "connection_status", "TEXT")
+        _ensure_column(connection, "website_checks", "http_status", "TEXT")
+        _ensure_column(connection, "website_checks", "diagnostic_summary", "TEXT")
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS saved_sites (
@@ -74,9 +82,13 @@ def save_check_result(result: dict[str, Any], db_path: Path | str | None = None)
                 status_label,
                 failure_type,
                 failure_stage,
+                dns_status,
+                connection_status,
+                http_status,
+                diagnostic_summary,
                 checked_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 result.get("input_url"),
@@ -91,6 +103,10 @@ def save_check_result(result: dict[str, Any], db_path: Path | str | None = None)
                 result.get("status_label", "healthy" if result.get("is_up") else "unknown_error"),
                 result.get("failure_type"),
                 result.get("failure_stage"),
+                result.get("dns_status", "not_checked"),
+                result.get("connection_status", "not_checked"),
+                result.get("http_status", "not_attempted"),
+                result.get("diagnostic_summary"),
                 result.get("checked_at"),
             ),
         )
@@ -128,6 +144,10 @@ def get_recent_checks(
                 status_label,
                 failure_type,
                 failure_stage,
+                dns_status,
+                connection_status,
+                http_status,
+                diagnostic_summary,
                 checked_at
             FROM website_checks
             ORDER BY id DESC
@@ -400,4 +420,15 @@ def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
     if item["is_up"]:
         item["failure_type"] = None
         item["failure_stage"] = None
+    item["dns_status"] = item.get("dns_status") or "not_checked"
+    item["connection_status"] = item.get("connection_status") or "not_checked"
+    item["http_status"] = item.get("http_status") or "not_attempted"
+    item["diagnostic_summary"] = item.get("diagnostic_summary") or _default_diagnostic_summary(item)
     return item
+
+
+def _default_diagnostic_summary(item: dict[str, Any]) -> str:
+    if item["is_up"]:
+        return "The saved check completed successfully."
+
+    return "This saved check was recorded before detailed diagnostics were available."
