@@ -1,5 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+from app.checker import check_website
+
+
+class WebsiteCheckRequest(BaseModel):
+    url: str
+
 
 app = FastAPI(
     title="Site Health Monitor API",
@@ -32,3 +40,8 @@ def health_check():
     return {
         "status": "ok"
     }
+
+
+@app.post("/api/check")
+def check_site(request: WebsiteCheckRequest):
+    return check_website(request.url)

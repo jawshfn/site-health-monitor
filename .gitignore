@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+backend/.venv/
 
 # Environment variables
 .env
@@ -20,3 +21,6 @@ build/
 # OS/editor files
 .DS_Store
 .vscode/
+
+# Pytest
+.pytest_cache/
