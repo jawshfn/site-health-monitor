@@ -53,6 +53,11 @@ def health_check():
     }
 
 
+@app.get("/api/summary")
+def dashboard_summary():
+    return storage.get_dashboard_summary()
+
+
 @app.post("/api/check")
 def check_site(request: WebsiteCheckRequest):
     return _check_and_save(request.url)
@@ -104,6 +109,9 @@ def check_all_saved_sites():
                 "normalized_url": site["normalized_url"],
                 "hostname": site["hostname"],
                 "is_up": check_result["is_up"],
+                "status_label": check_result.get("status_label"),
+                "failure_type": check_result.get("failure_type"),
+                "failure_stage": check_result.get("failure_stage"),
                 "status_code": check_result["status_code"],
                 "response_time_ms": check_result["response_time_ms"],
                 "error": check_result["error"],
@@ -170,5 +178,13 @@ def update_saved_site_name(site_id: int, request: SavedSiteNameUpdateRequest):
 
 def _check_and_save(url: str):
     result = check_website(url)
+    _add_status_defaults(result)
     storage.save_check_result(result)
     return result
+
+
+def _add_status_defaults(result: dict):
+    is_up = bool(result.get("is_up"))
+    result.setdefault("status_label", "healthy" if is_up else "unknown_error")
+    result.setdefault("failure_type", None if is_up else "unknown_error")
+    result.setdefault("failure_stage", None if is_up else "unknown")

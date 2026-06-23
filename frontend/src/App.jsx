@@ -5,6 +5,7 @@ const CHECK_API_URL = "http://127.0.0.1:8000/api/check";
 const HISTORY_API_URL = "http://127.0.0.1:8000/api/history";
 const HISTORY_PAGE_SIZE = 10;
 const CLEAR_HISTORY_API_URL = "http://127.0.0.1:8000/api/history";
+const SUMMARY_API_URL = "http://127.0.0.1:8000/api/summary";
 const SITES_API_URL = "http://127.0.0.1:8000/api/sites";
 const CHECK_ALL_API_URL = "http://127.0.0.1:8000/api/sites/check-all";
 
@@ -35,8 +36,12 @@ function App() {
   const [isClearingHistory, setIsClearingHistory] = useState(false);
   const [historyMessage, setHistoryMessage] = useState("");
   const [historyNotice, setHistoryNotice] = useState("");
+  const [summary, setSummary] = useState(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [summaryMessage, setSummaryMessage] = useState("");
 
   useEffect(() => {
+    loadSummary();
     loadHistory();
     loadSavedSites();
   }, []);
@@ -44,6 +49,28 @@ function App() {
   function clearCheckAllResults() {
     setCheckAllResult(null);
     setCheckAllMessage("");
+  }
+
+  async function loadSummary() {
+    setIsSummaryLoading(true);
+    setSummaryMessage("");
+
+    try {
+      const response = await fetch(SUMMARY_API_URL);
+
+      if (!response.ok) {
+        throw new Error(`Summary request failed with status ${response.status}.`);
+      }
+
+      const data = await response.json();
+      setSummary(data);
+    } catch (error) {
+      setSummaryMessage(
+        "Could not load dashboard summary. Make sure the backend is running at http://127.0.0.1:8000."
+      );
+    } finally {
+      setIsSummaryLoading(false);
+    }
   }
 
   async function loadHistory({ offset = 0, append = false } = {}) {
@@ -106,6 +133,7 @@ function App() {
       setHistoryTotal(0);
       setHasMoreHistory(false);
       setHistoryNotice(`Cleared ${data.deleted_count} saved check results.`);
+      await loadSummary();
     } catch (error) {
       setHistoryMessage(
         error instanceof Error
@@ -133,6 +161,7 @@ function App() {
       setEditingSiteId(null);
       setEditingSiteName("");
       clearCheckAllResults();
+      await loadSummary();
     } catch (error) {
       setSitesMessage(
         "Could not load saved sites. Make sure the backend is running at http://127.0.0.1:8000."
@@ -196,6 +225,7 @@ function App() {
       const data = await checkUrl(site.normalized_url);
       setResult(data);
       await loadHistory();
+      await loadSummary();
     } catch (error) {
       setMessage(
         "Could not check the saved site. Make sure the backend is running at http://127.0.0.1:8000."
@@ -220,6 +250,7 @@ function App() {
 
       setSavedSites((currentSites) => currentSites.filter((site) => site.id !== siteId));
       clearCheckAllResults();
+      await loadSummary();
     } catch (error) {
       setSitesMessage(
         "Could not delete the saved site. Make sure the backend is running at http://127.0.0.1:8000."
@@ -268,6 +299,7 @@ function App() {
       setEditingSiteId(null);
       setEditingSiteName("");
       clearCheckAllResults();
+      await loadSummary();
     } catch (error) {
       setSitesMessage(
         error instanceof Error
@@ -303,6 +335,7 @@ function App() {
       const data = await response.json();
       setCheckAllResult(data);
       await loadHistory();
+      await loadSummary();
     } catch (error) {
       setCheckAllMessage(
         error instanceof Error
@@ -348,6 +381,7 @@ function App() {
       const data = await checkUrl(trimmedUrl);
       setResult(data);
       await loadHistory();
+      await loadSummary();
     } catch (error) {
       setMessage(
         "Could not check the site. Make sure the backend is running at http://127.0.0.1:8000."
@@ -370,6 +404,12 @@ function App() {
         </div>
       </section>
 
+      <DashboardSummary
+        summary={summary}
+        isLoading={isSummaryLoading}
+        message={summaryMessage}
+      />
+
       <section className="checker-panel" aria-label="Website checker">
         <form onSubmit={handleSubmit} className="check-form">
           <label htmlFor="url">Website URL</label>
@@ -389,6 +429,10 @@ function App() {
           </div>
           <p id="url-help" className="field-help">
             Try a domain like example.com or a full URL like https://example.com.
+          </p>
+          <p className="observation-note">
+            Results show what this checker observed. Some websites may block automated
+            requests, use CDN protection, or respond differently by region or timeout.
           </p>
         </form>
 
@@ -554,13 +598,67 @@ function SavedSitesSection({
   );
 }
 
+function DashboardSummary({ summary, isLoading, message }) {
+  const items = [
+    {
+      label: "Saved Sites",
+      value: summary?.saved_sites_count ?? 0,
+      helper: "In watchlist",
+    },
+    {
+      label: "Total Checks",
+      value: summary?.total_checks ?? 0,
+      helper: "Saved results",
+    },
+    {
+      label: "Latest Healthy",
+      value: summary?.latest_up_count ?? 0,
+      helper: "Newest status per site",
+    },
+    {
+      label: "Latest Issues",
+      value: summary?.latest_down_count ?? 0,
+      helper: "Newest status per site",
+    },
+    {
+      label: "Avg Response",
+      value: formatResponseTime(summary?.average_response_time_ms) ?? "Not available",
+      helper: "Checks with response time",
+    },
+  ];
+
+  return (
+    <section className="summary-panel" aria-label="Dashboard summary">
+      <div className="summary-header">
+        <div>
+          <p className="section-label">Dashboard</p>
+          <h2>Monitoring Summary</h2>
+        </div>
+        {isLoading && <span className="summary-loading">Updating...</span>}
+      </div>
+
+      {message && <p className="error-message">{message}</p>}
+
+      <div className="dashboard-grid">
+        {items.map((item) => (
+          <article className="dashboard-card" key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+            <p>{item.helper}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function CheckAllSummary({ summary }) {
   return (
     <article className="check-all-summary">
       <div className="result-summary" aria-label="Check all summary">
         <SummaryItem label="Total" value={summary.total} />
-        <SummaryItem label="Up" value={summary.up} />
-        <SummaryItem label="Down" value={summary.down} />
+        <SummaryItem label="Healthy" value={summary.up} />
+        <SummaryItem label="Issues" value={summary.down} />
       </div>
 
       {summary.results.length > 0 && (
@@ -571,11 +669,11 @@ function CheckAllSummary({ summary }) {
                 <h4>{result.name || result.hostname || result.normalized_url}</h4>
                 <p>{result.normalized_url}</p>
               </div>
-              <StatusBadge isUp={result.is_up} />
+              <StatusBadge result={result} />
               <dl>
                 <div>
                   <dt>HTTP</dt>
-                  <dd>{result.status_code ?? "Not available"}</dd>
+                  <dd>{formatHttpStatus(result)}</dd>
                 </div>
                 <div>
                   <dt>Response</dt>
@@ -693,12 +791,12 @@ function ResultCard({ result }) {
           <p className="section-label">Latest Result</p>
           <h2>{result.hostname ?? result.input_url ?? "Website check"}</h2>
         </div>
-        <StatusBadge isUp={result.is_up} />
+        <StatusBadge result={result} />
       </div>
 
       <div className="result-summary" aria-label="Result summary">
-        <SummaryItem label="Status" value={result.is_up ? "Reachable" : "Not reachable"} />
-        <SummaryItem label="HTTP" value={result.status_code ?? "Not available"} />
+        <SummaryItem label="Status" value={getStatusText(result)} />
+        <SummaryItem label="HTTP" value={formatHttpStatus(result)} />
         <SummaryItem
           label="Response"
           value={formatResponseTime(result.response_time_ms) ?? "Not available"}
@@ -710,12 +808,14 @@ function ResultCard({ result }) {
         <ResultRow label="Normalized URL" value={result.normalized_url} />
         <ResultRow label="Final URL" value={result.final_url} />
         <ResultRow label="Hostname" value={result.hostname} />
-        <ResultRow label="Status Code" value={result.status_code} />
+        <ResultRow label="Observed Result" value={getStatusText(result)} />
+        <ResultRow label="Status Code" value={formatHttpStatus(result)} />
         <ResultRow label="Response Time" value={formatResponseTime(result.response_time_ms)} />
         <ResultRow label="IP Addresses" value={formatIpAddresses(result.ip_addresses)} />
         <ResultRow label="Checked At" value={formatDate(result.checked_at)} />
         {result.error && <ResultRow label="Error" value={result.error} />}
       </dl>
+      {!result.is_up && <p className="result-note">{getStatusExplanation(result)}</p>}
     </article>
   );
 }
@@ -738,7 +838,7 @@ function HistorySection({
       <div className="history-header">
         <div>
           <p className="section-label">Recent History</p>
-          <h2>Saved Checks</h2>
+          <h2>Previous Checks</h2>
         </div>
         <div className="section-actions">
           <button type="button" className="secondary-button" onClick={onRefresh} disabled={isLoading || isClearing}>
@@ -801,9 +901,9 @@ function HistoryTable({ history }) {
                 {check.normalized_url ?? check.input_url ?? "Not available"}
               </td>
               <td data-label="Status">
-                <StatusBadge isUp={check.is_up} />
+                <StatusBadge result={check} />
               </td>
-              <td data-label="HTTP">{check.status_code ?? "Not available"}</td>
+              <td data-label="HTTP">{formatHttpStatus(check)}</td>
               <td data-label="Time">{formatResponseTime(check.response_time_ms) ?? "Not available"}</td>
               <td data-label="Checked">{formatDate(check.checked_at) ?? "Not available"}</td>
               <td data-label="Error" className="error-cell">
@@ -817,11 +917,14 @@ function HistoryTable({ history }) {
   );
 }
 
-function StatusBadge({ isUp }) {
+function StatusBadge({ result }) {
+  const isHealthy = result?.is_up === true;
+  const statusText = getStatusText(result);
+
   return (
-    <span className={isUp ? "badge badge-up" : "badge badge-down"}>
-      <span aria-hidden="true">{isUp ? "OK" : "!"}</span>
-      {isUp ? "Up" : "Down"}
+    <span className={isHealthy ? "badge badge-up" : "badge badge-issue"}>
+      <span aria-hidden="true">{isHealthy ? "OK" : "!"}</span>
+      {statusText}
     </span>
   );
 }
@@ -850,6 +953,41 @@ function formatResponseTime(value) {
   }
 
   return `${value} ms`;
+}
+
+function formatHttpStatus(result) {
+  if (!result || result.status_code === null || result.status_code === undefined) {
+    return result?.status_label === "timeout" ? "No response" : "Not available";
+  }
+
+  return result.status_code;
+}
+
+function getStatusText(result) {
+  const labels = {
+    healthy: "Healthy",
+    http_error: "HTTP Error",
+    timeout: "Timed Out",
+    dns_error: "DNS Failed",
+    connection_error: "Connection Failed",
+    invalid_url: "Invalid URL",
+    unknown_error: "Unknown Error",
+  };
+
+  return labels[result?.status_label] ?? (result?.is_up ? "Healthy" : "Unknown Error");
+}
+
+function getStatusExplanation(result) {
+  const explanations = {
+    http_error: "The server responded, but the checked URL returned a non-success status.",
+    timeout: "No HTTP response was received before the timeout. The site may still be online.",
+    dns_error: "The hostname could not be resolved by this checker.",
+    connection_error: "This checker could not open an HTTP connection to the site.",
+    invalid_url: "The submitted URL could not be checked.",
+    unknown_error: "This checker encountered an unexpected error.",
+  };
+
+  return explanations[result?.status_label] ?? "This checker observed an issue with the request.";
 }
 
 function formatIpAddresses(value) {

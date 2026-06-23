@@ -84,6 +84,90 @@ def test_clear_history_endpoint_removes_history_but_keeps_saved_sites(monkeypatc
     assert sites[0]["hostname"] == "example.com"
 
 
+def test_summary_endpoint_returns_empty_totals(monkeypatch, tmp_path):
+    db_path = tmp_path / "summary.db"
+    monkeypatch.setattr(storage, "DATABASE_PATH", db_path)
+
+    client = TestClient(app)
+    response = client.get("/api/summary")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "saved_sites_count": 0,
+        "total_checks": 0,
+        "latest_up_count": 0,
+        "latest_down_count": 0,
+        "average_response_time_ms": None,
+    }
+
+
+def test_summary_endpoint_counts_saved_sites_history_and_latest_status(monkeypatch, tmp_path):
+    db_path = tmp_path / "summary.db"
+    monkeypatch.setattr(storage, "DATABASE_PATH", db_path)
+
+    check_results = {
+        "example.com": {
+            "input_url": "example.com",
+            "normalized_url": "https://example.com",
+            "final_url": "https://example.com",
+            "hostname": "example.com",
+            "status_code": 200,
+            "is_up": True,
+            "response_time_ms": 100,
+            "ip_addresses": [],
+            "checked_at": "2026-06-23T12:00:00+00:00",
+            "error": None,
+        },
+        "down.example": {
+            "input_url": "down.example",
+            "normalized_url": "https://down.example",
+            "final_url": None,
+            "hostname": "down.example",
+            "status_code": None,
+            "is_up": False,
+            "response_time_ms": None,
+            "ip_addresses": [],
+            "checked_at": "2026-06-23T12:01:00+00:00",
+            "error": "DNS lookup failed",
+        },
+        "https://example.com": {
+            "input_url": "https://example.com",
+            "normalized_url": "https://example.com",
+            "final_url": "https://example.com",
+            "hostname": "example.com",
+            "status_code": 200,
+            "is_up": True,
+            "response_time_ms": 300,
+            "ip_addresses": [],
+            "checked_at": "2026-06-23T12:02:00+00:00",
+            "error": None,
+        },
+    }
+
+    def fake_check_website(url):
+        return check_results[url]
+
+    monkeypatch.setattr("app.main.check_website", fake_check_website)
+
+    client = TestClient(app)
+    client.post("/api/sites", json={"url": "example.com", "name": "Example"})
+    client.post("/api/sites", json={"url": "down.example", "name": "Down"})
+    client.post("/api/check", json={"url": "example.com"})
+    client.post("/api/check", json={"url": "down.example"})
+    client.post("/api/check", json={"url": "https://example.com"})
+
+    response = client.get("/api/summary")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "saved_sites_count": 2,
+        "total_checks": 3,
+        "latest_up_count": 1,
+        "latest_down_count": 1,
+        "average_response_time_ms": 200.0,
+    }
+
+
 def test_saved_sites_endpoints_create_list_and_delete(monkeypatch, tmp_path):
     db_path = tmp_path / "sites.db"
     monkeypatch.setattr(storage, "DATABASE_PATH", db_path)

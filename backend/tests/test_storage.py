@@ -1,3 +1,5 @@
+import sqlite3
+
 from app import storage
 
 
@@ -14,6 +16,9 @@ def test_save_check_result_and_get_recent_checks(tmp_path):
         "ip_addresses": ["93.184.216.34"],
         "checked_at": "2026-06-23T12:00:00+00:00",
         "error": None,
+        "status_label": "healthy",
+        "failure_type": None,
+        "failure_stage": None,
     }
     second_result = {
         "input_url": "bad-url",
@@ -26,6 +31,9 @@ def test_save_check_result_and_get_recent_checks(tmp_path):
         "ip_addresses": [],
         "checked_at": "2026-06-23T12:01:00+00:00",
         "error": "URL must include a valid hostname.",
+        "status_label": "invalid_url",
+        "failure_type": "invalid_url",
+        "failure_stage": "validation",
     }
 
     first_id = storage.save_check_result(first_result, db_path)
@@ -36,8 +44,73 @@ def test_save_check_result_and_get_recent_checks(tmp_path):
     assert second_id > first_id
     assert [check["id"] for check in checks] == [second_id, first_id]
     assert checks[0]["is_up"] is False
+    assert checks[0]["status_label"] == "invalid_url"
+    assert checks[0]["failure_type"] == "invalid_url"
+    assert checks[0]["failure_stage"] == "validation"
     assert checks[0]["error"] == "URL must include a valid hostname."
     assert checks[1]["ip_addresses"] == ["93.184.216.34"]
+    assert checks[1]["status_label"] == "healthy"
+    assert checks[1]["failure_type"] is None
+    assert checks[1]["failure_stage"] is None
+
+
+def test_initialize_database_migrates_old_check_history_table(tmp_path):
+    db_path = tmp_path / "old-history.db"
+
+    with sqlite3.connect(db_path) as connection:
+        connection.execute(
+            """
+            CREATE TABLE website_checks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                input_url TEXT NOT NULL,
+                normalized_url TEXT,
+                final_url TEXT,
+                hostname TEXT,
+                is_up INTEGER NOT NULL,
+                status_code INTEGER,
+                response_time_ms INTEGER,
+                ip_addresses TEXT NOT NULL,
+                error TEXT,
+                checked_at TEXT NOT NULL
+            )
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO website_checks (
+                input_url,
+                normalized_url,
+                final_url,
+                hostname,
+                is_up,
+                status_code,
+                response_time_ms,
+                ip_addresses,
+                error,
+                checked_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "example.com",
+                "https://example.com",
+                "https://example.com",
+                "example.com",
+                1,
+                200,
+                123,
+                "[]",
+                None,
+                "2026-06-23T12:00:00+00:00",
+            ),
+        )
+
+    checks = storage.get_recent_checks(db_path=db_path)
+
+    assert len(checks) == 1
+    assert checks[0]["status_label"] == "healthy"
+    assert checks[0]["failure_type"] is None
+    assert checks[0]["failure_stage"] is None
 
 
 def test_get_recent_checks_respects_limit(tmp_path):
@@ -142,6 +215,101 @@ def test_clear_check_history_removes_checks_but_keeps_saved_sites(tmp_path):
     sites = storage.get_saved_sites(db_path)
     assert len(sites) == 1
     assert sites[0]["hostname"] == "example.com"
+
+
+def test_dashboard_summary_returns_empty_totals(tmp_path):
+    db_path = tmp_path / "summary.db"
+
+    summary = storage.get_dashboard_summary(db_path)
+
+    assert summary == {
+        "saved_sites_count": 0,
+        "total_checks": 0,
+        "latest_up_count": 0,
+        "latest_down_count": 0,
+        "average_response_time_ms": None,
+    }
+
+
+def test_dashboard_summary_counts_latest_status_and_average_response_time(tmp_path):
+    db_path = tmp_path / "summary.db"
+    storage.create_saved_site(
+        url="example.com",
+        normalized_url="https://example.com",
+        hostname="example.com",
+        name="Example",
+        db_path=db_path,
+    )
+    storage.create_saved_site(
+        url="down.example",
+        normalized_url="https://down.example",
+        hostname="down.example",
+        name="Down",
+        db_path=db_path,
+    )
+    storage.create_saved_site(
+        url="never.example",
+        normalized_url="https://never.example",
+        hostname="never.example",
+        name="Never Checked",
+        db_path=db_path,
+    )
+
+    storage.save_check_result(
+        {
+            "input_url": "example.com",
+            "normalized_url": "https://example.com",
+            "final_url": "https://example.com",
+            "hostname": "example.com",
+            "status_code": 200,
+            "is_up": True,
+            "response_time_ms": 100,
+            "ip_addresses": [],
+            "checked_at": "2026-06-23T12:00:00+00:00",
+            "error": None,
+        },
+        db_path,
+    )
+    storage.save_check_result(
+        {
+            "input_url": "down.example",
+            "normalized_url": "https://down.example",
+            "final_url": None,
+            "hostname": "down.example",
+            "status_code": None,
+            "is_up": False,
+            "response_time_ms": None,
+            "ip_addresses": [],
+            "checked_at": "2026-06-23T12:01:00+00:00",
+            "error": "DNS lookup failed",
+        },
+        db_path,
+    )
+    storage.save_check_result(
+        {
+            "input_url": "example.com",
+            "normalized_url": "https://example.com",
+            "final_url": None,
+            "hostname": "example.com",
+            "status_code": None,
+            "is_up": False,
+            "response_time_ms": 200,
+            "ip_addresses": [],
+            "checked_at": "2026-06-23T12:02:00+00:00",
+            "error": "Request timed out",
+        },
+        db_path,
+    )
+
+    summary = storage.get_dashboard_summary(db_path)
+
+    assert summary == {
+        "saved_sites_count": 3,
+        "total_checks": 3,
+        "latest_up_count": 0,
+        "latest_down_count": 2,
+        "average_response_time_ms": 150.0,
+    }
 
 
 def test_create_and_list_saved_sites(tmp_path):

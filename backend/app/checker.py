@@ -29,6 +29,7 @@ def normalize_url(url: str) -> str:
 
 def check_website(url: str) -> dict[str, Any]:
     checked_at = datetime.now(timezone.utc).isoformat()
+    start_time: float | None = None
     result: dict[str, Any] = {
         "input_url": url,
         "normalized_url": None,
@@ -40,6 +41,9 @@ def check_website(url: str) -> dict[str, Any]:
         "ip_addresses": [],
         "checked_at": checked_at,
         "error": None,
+        "status_label": "unknown_error",
+        "failure_type": "unknown_error",
+        "failure_stage": "unknown",
     }
 
     try:
@@ -57,13 +61,51 @@ def check_website(url: str) -> dict[str, Any]:
         start_time = time.perf_counter()
         response = httpx.get(normalized_url, follow_redirects=True, timeout=5.0)
         response_time_ms = round((time.perf_counter() - start_time) * 1000)
+        is_healthy = 200 <= response.status_code < 400
 
         result["status_code"] = response.status_code
-        result["is_up"] = response.is_success
+        result["is_up"] = is_healthy
         result["response_time_ms"] = response_time_ms
         result["final_url"] = str(response.url)
+        result["status_label"] = "healthy" if is_healthy else "http_error"
+        result["failure_type"] = None if is_healthy else "http_error"
+        result["failure_stage"] = None if is_healthy else "http"
+    except ValueError as exc:
+        result["error"] = str(exc)
+        result["status_label"] = "invalid_url"
+        result["failure_type"] = "invalid_url"
+        result["failure_stage"] = "validation"
+    except socket.gaierror as exc:
+        result["error"] = f"DNS lookup failed: {exc}"
+        result["status_label"] = "dns_error"
+        result["failure_type"] = "dns_error"
+        result["failure_stage"] = "dns"
+    except httpx.TimeoutException as exc:
+        result["error"] = "No HTTP response was received before the timeout."
+        if start_time is not None:
+            result["response_time_ms"] = round((time.perf_counter() - start_time) * 1000)
+        result["status_label"] = "timeout"
+        result["failure_type"] = "timeout"
+        result["failure_stage"] = "http"
+    except httpx.ConnectError as exc:
+        result["error"] = f"Connection failed: {exc}"
+        if start_time is not None:
+            result["response_time_ms"] = round((time.perf_counter() - start_time) * 1000)
+        result["status_label"] = "connection_error"
+        result["failure_type"] = "connection_error"
+        result["failure_stage"] = "connection"
+    except httpx.NetworkError as exc:
+        result["error"] = f"Connection failed: {exc}"
+        if start_time is not None:
+            result["response_time_ms"] = round((time.perf_counter() - start_time) * 1000)
+        result["status_label"] = "connection_error"
+        result["failure_type"] = "connection_error"
+        result["failure_stage"] = "connection"
     except Exception as exc:
         result["error"] = str(exc)
+        result["status_label"] = "unknown_error"
+        result["failure_type"] = "unknown_error"
+        result["failure_stage"] = "unknown"
 
     return result
 

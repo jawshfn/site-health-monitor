@@ -63,6 +63,7 @@ h1 {
 
 .checker-panel,
 .history-panel,
+.summary-panel,
 .sites-panel {
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid #d9e1ea;
@@ -72,8 +73,13 @@ h1 {
 }
 
 .history-panel,
+.summary-panel,
 .sites-panel {
   margin-top: 24px;
+}
+
+.summary-panel {
+  margin-bottom: 24px;
 }
 
 .check-form label,
@@ -113,6 +119,18 @@ input:focus {
   color: #64748b;
   font-size: 0.92rem;
   margin: 10px 0 0;
+}
+
+.observation-note,
+.result-note {
+  background: #f4f7fa;
+  border-left: 4px solid #bdc8d6;
+  border-radius: 8px;
+  color: #526176;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  margin: 12px 0 0;
+  padding: 11px 13px;
 }
 
 button {
@@ -259,6 +277,63 @@ button:disabled {
   border-top: 1px solid #e2e7ef;
   margin: 18px 0;
   padding: 18px 0 0 18px;
+}
+
+.summary-header {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.summary-header h2 {
+  color: #111827;
+  font-size: 1.35rem;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.summary-loading {
+  color: #526176;
+  font-weight: 800;
+}
+
+.dashboard-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.dashboard-card {
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.dashboard-card span {
+  color: #64748b;
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 900;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.dashboard-card strong {
+  color: #111827;
+  display: block;
+  font-size: 1.55rem;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-card p {
+  color: #526176;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  margin: 10px 0 0;
 }
 
 .check-all-results {
@@ -424,12 +499,12 @@ button:disabled {
   color: #ffffff;
 }
 
-.badge-down {
+.badge-issue {
   background: #ffe5e5;
   color: #9d2525;
 }
 
-.badge-down span {
+.badge-issue span {
   background: #9d2525;
   color: #ffffff;
 }
@@ -553,11 +628,13 @@ dd {
 
   .checker-panel,
   .history-panel,
+  .summary-panel,
   .sites-panel {
     padding: 18px;
   }
 
   .form-row,
+  .dashboard-grid,
   .result-row,
   .result-summary,
   .saved-site-form,
@@ -576,6 +653,7 @@ dd {
   }
 
   .result-header,
+  .summary-header,
   .history-header {
     align-items: stretch;
     flex-direction: column;
