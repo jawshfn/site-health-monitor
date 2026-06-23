@@ -67,6 +67,55 @@ def test_get_recent_checks_respects_limit(tmp_path):
     assert checks[1]["input_url"] == "example-1.com"
 
 
+def test_clear_check_history_removes_checks_but_keeps_saved_sites(tmp_path):
+    db_path = tmp_path / "history.db"
+    storage.save_check_result(
+        {
+            "input_url": "example.com",
+            "normalized_url": "https://example.com",
+            "final_url": "https://example.com",
+            "hostname": "example.com",
+            "status_code": 200,
+            "is_up": True,
+            "response_time_ms": 123,
+            "ip_addresses": ["93.184.216.34"],
+            "checked_at": "2026-06-23T12:00:00+00:00",
+            "error": None,
+        },
+        db_path,
+    )
+    storage.save_check_result(
+        {
+            "input_url": "github.com",
+            "normalized_url": "https://github.com",
+            "final_url": "https://github.com",
+            "hostname": "github.com",
+            "status_code": 200,
+            "is_up": True,
+            "response_time_ms": 95,
+            "ip_addresses": [],
+            "checked_at": "2026-06-23T12:01:00+00:00",
+            "error": None,
+        },
+        db_path,
+    )
+    storage.create_saved_site(
+        url="example.com",
+        normalized_url="https://example.com",
+        hostname="example.com",
+        name="Example",
+        db_path=db_path,
+    )
+
+    deleted_count = storage.clear_check_history(db_path)
+
+    assert deleted_count == 2
+    assert storage.get_recent_checks(db_path=db_path) == []
+    sites = storage.get_saved_sites(db_path)
+    assert len(sites) == 1
+    assert sites[0]["hostname"] == "example.com"
+
+
 def test_create_and_list_saved_sites(tmp_path):
     db_path = tmp_path / "sites.db"
 

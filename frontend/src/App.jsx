@@ -3,6 +3,7 @@ import "./App.css";
 
 const CHECK_API_URL = "http://127.0.0.1:8000/api/check";
 const HISTORY_API_URL = "http://127.0.0.1:8000/api/history?limit=10";
+const CLEAR_HISTORY_API_URL = "http://127.0.0.1:8000/api/history";
 const SITES_API_URL = "http://127.0.0.1:8000/api/sites";
 const CHECK_ALL_API_URL = "http://127.0.0.1:8000/api/sites/check-all";
 
@@ -24,7 +25,9 @@ function App() {
   const [sitesMessage, setSitesMessage] = useState("");
   const [history, setHistory] = useState([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [isClearingHistory, setIsClearingHistory] = useState(false);
   const [historyMessage, setHistoryMessage] = useState("");
+  const [historyNotice, setHistoryNotice] = useState("");
 
   useEffect(() => {
     loadHistory();
@@ -34,6 +37,7 @@ function App() {
   async function loadHistory() {
     setIsHistoryLoading(true);
     setHistoryMessage("");
+    setHistoryNotice("");
 
     try {
       const response = await fetch(HISTORY_API_URL);
@@ -50,6 +54,43 @@ function App() {
       );
     } finally {
       setIsHistoryLoading(false);
+    }
+  }
+
+  async function clearHistory() {
+    const confirmed = window.confirm(
+      "Clear all saved check history? Your saved monitored sites will not be deleted."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsClearingHistory(true);
+    setHistoryMessage("");
+    setHistoryNotice("");
+
+    try {
+      const response = await fetch(CLEAR_HISTORY_API_URL, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.detail ?? `Clear history failed with status ${response.status}.`);
+      }
+
+      const data = await response.json();
+      setHistory([]);
+      setHistoryNotice(`Cleared ${data.deleted_count} saved check results.`);
+    } catch (error) {
+      setHistoryMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not clear history. Make sure the backend is running."
+      );
+    } finally {
+      setIsClearingHistory(false);
     }
   }
 
@@ -303,8 +344,11 @@ function App() {
       <HistorySection
         history={history}
         isLoading={isHistoryLoading}
+        isClearing={isClearingHistory}
         message={historyMessage}
+        notice={historyNotice}
         onRefresh={loadHistory}
+        onClear={clearHistory}
       />
     </main>
   );
@@ -517,7 +561,7 @@ function ResultCard({ result }) {
   );
 }
 
-function HistorySection({ history, isLoading, message, onRefresh }) {
+function HistorySection({ history, isLoading, isClearing, message, notice, onRefresh, onClear }) {
   return (
     <section className="history-panel" aria-label="Recent check history">
       <div className="history-header">
@@ -525,12 +569,18 @@ function HistorySection({ history, isLoading, message, onRefresh }) {
           <p className="section-label">Recent History</p>
           <h2>Saved Checks</h2>
         </div>
-        <button type="button" className="secondary-button" onClick={onRefresh} disabled={isLoading}>
-          {isLoading ? "Refreshing..." : "Refresh History"}
-        </button>
+        <div className="section-actions">
+          <button type="button" className="secondary-button" onClick={onRefresh} disabled={isLoading || isClearing}>
+            {isLoading ? "Refreshing..." : "Refresh History"}
+          </button>
+          <button type="button" className="danger-button" onClick={onClear} disabled={isClearing || isLoading}>
+            {isClearing ? "Clearing..." : "Clear History"}
+          </button>
+        </div>
       </div>
 
       {isLoading && <p className="status-message">Loading recent checks...</p>}
+      {notice && <p className="success-message">{notice}</p>}
       {message && <p className="error-message">{message}</p>}
       {!isLoading && !message && history.length === 0 && (
         <p className="empty-message">No saved checks yet.</p>

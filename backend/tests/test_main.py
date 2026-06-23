@@ -38,6 +38,46 @@ def test_check_endpoint_saves_result_and_history_returns_it(monkeypatch, tmp_pat
     assert history[0]["is_up"] is True
 
 
+def test_clear_history_endpoint_removes_history_but_keeps_saved_sites(monkeypatch, tmp_path):
+    db_path = tmp_path / "history.db"
+    monkeypatch.setattr(storage, "DATABASE_PATH", db_path)
+
+    def fake_check_website(url):
+        return {
+            "input_url": url,
+            "normalized_url": "https://example.com",
+            "final_url": "https://example.com",
+            "hostname": "example.com",
+            "status_code": 200,
+            "is_up": True,
+            "response_time_ms": 42,
+            "ip_addresses": ["93.184.216.34"],
+            "checked_at": "2026-06-23T12:00:00+00:00",
+            "error": None,
+        }
+
+    monkeypatch.setattr("app.main.check_website", fake_check_website)
+
+    client = TestClient(app)
+    client.post("/api/sites", json={"url": "example.com", "name": "Example"})
+    client.post("/api/check", json={"url": "example.com"})
+    client.post("/api/check", json={"url": "github.com"})
+
+    clear_response = client.delete("/api/history")
+    history_response = client.get("/api/history")
+    sites_response = client.get("/api/sites")
+
+    assert clear_response.status_code == 200
+    assert clear_response.json() == {
+        "deleted": True,
+        "deleted_count": 2,
+    }
+    assert history_response.json() == []
+    sites = sites_response.json()
+    assert len(sites) == 1
+    assert sites[0]["hostname"] == "example.com"
+
+
 def test_saved_sites_endpoints_create_list_and_delete(monkeypatch, tmp_path):
     db_path = tmp_path / "sites.db"
     monkeypatch.setattr(storage, "DATABASE_PATH", db_path)

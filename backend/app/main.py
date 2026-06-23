@@ -59,6 +59,15 @@ def check_history(limit: int = Query(default=20, ge=1, le=100)):
     return storage.get_recent_checks(limit)
 
 
+@app.delete("/api/history")
+def clear_history():
+    deleted_count = storage.clear_check_history()
+    return {
+        "deleted": True,
+        "deleted_count": deleted_count,
+    }
+
+
 @app.get("/api/sites")
 def list_saved_sites():
     return storage.get_saved_sites()

@@ -170,7 +170,8 @@ button:disabled {
 
 .status-message,
 .error-message,
-.empty-message {
+.empty-message,
+.success-message {
   border-radius: 8px;
   margin: 18px 0 0;
   padding: 12px 14px;
@@ -180,6 +181,12 @@ button:disabled {
 .empty-message {
   background: #f4f7fa;
   color: #526176;
+}
+
+.success-message {
+  background: #eaf8f0;
+  color: #126b3f;
+  font-weight: 700;
 }
 
 .error-message {
@@ -335,6 +342,11 @@ button:disabled {
 }
 
 .site-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.section-actions {
   display: flex;
   gap: 10px;
 }
@@ -544,6 +556,10 @@ dd {
   }
 
   .site-actions {
+    flex-direction: column;
+  }
+
+  .section-actions {
     flex-direction: column;
   }
 

@@ -119,6 +119,16 @@ def get_recent_checks(
     return [_row_to_dict(row) for row in rows]
 
 
+def clear_check_history(db_path: Path | str | None = None) -> int:
+    initialize_database(db_path)
+    path = _get_database_path(db_path)
+
+    with sqlite3.connect(path) as connection:
+        cursor = connection.execute("DELETE FROM website_checks")
+
+    return cursor.rowcount
+
+
 def create_saved_site(
     url: str,
     normalized_url: str,

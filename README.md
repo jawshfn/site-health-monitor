@@ -19,6 +19,7 @@ Completed so far:
 * Response time measurement
 * SQLite-backed check history
 * `GET /api/history` endpoint
+* Clear Check History endpoint and frontend action
 * Saved monitored sites/watchlist backend endpoints
 * Backend check-all endpoint for saved monitored sites
 * Basic React frontend website check form
@@ -42,6 +43,8 @@ Currently implemented:
 
 * `GET /api/history` endpoint for viewing recent saved checks
 
+* `DELETE /api/history` endpoint for clearing saved check history without deleting saved monitored sites
+
 * Optional history limit using `GET /api/history?limit=2`
 
 * Saved monitored sites API
@@ -62,6 +65,8 @@ Currently implemented:
 * Frontend result card for availability, response time, DNS/IP details, redirect target, timestamp, and errors
 
 * Frontend recent history table loaded from `GET /api/history?limit=10`
+
+* Frontend Clear History action with confirmation
 
 * Refreshable saved check history after new website checks
 
@@ -307,6 +312,23 @@ Limit the number of history results:
 GET /api/history?limit=2
 ```
 
+Clear saved check history:
+
+```text
+DELETE /api/history
+```
+
+Example response:
+
+```json
+{
+  "deleted": true,
+  "deleted_count": 10
+}
+```
+
+This only clears website check history. Saved monitored sites are not deleted.
+
 ### Saved monitored sites
 
 ```text
@@ -446,5 +468,6 @@ Milestone order:
 8. Frontend saved-sites/watchlist UI
 9. Backend check-all saved sites API
 10. Frontend Check All Saved Sites button and dashboard summary
-11. Screenshots
-12. Deployment documentation
+11. Clear Check History
+12. Screenshots
+13. Deployment documentation
