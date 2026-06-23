@@ -1,13 +1,43 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./App.css";
 
-const API_URL = "http://127.0.0.1:8000/api/check";
+const CHECK_API_URL = "http://127.0.0.1:8000/api/check";
+const HISTORY_API_URL = "http://127.0.0.1:8000/api/history?limit=10";
 
 function App() {
   const [url, setUrl] = useState("");
   const [result, setResult] = useState(null);
   const [isChecking, setIsChecking] = useState(false);
   const [message, setMessage] = useState("");
+  const [history, setHistory] = useState([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [historyMessage, setHistoryMessage] = useState("");
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  async function loadHistory() {
+    setIsHistoryLoading(true);
+    setHistoryMessage("");
+
+    try {
+      const response = await fetch(HISTORY_API_URL);
+
+      if (!response.ok) {
+        throw new Error(`History request failed with status ${response.status}.`);
+      }
+
+      const data = await response.json();
+      setHistory(data);
+    } catch (error) {
+      setHistoryMessage(
+        "Could not load recent history. Make sure the backend is running at http://127.0.0.1:8000."
+      );
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -24,7 +54,7 @@ function App() {
     setResult(null);
 
     try {
-      const response = await fetch(API_URL, {
+      const response = await fetch(CHECK_API_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -38,6 +68,7 @@ function App() {
 
       const data = await response.json();
       setResult(data);
+      await loadHistory();
     } catch (error) {
       setMessage(
         "Could not check the site. Make sure the backend is running at http://127.0.0.1:8000."
@@ -80,6 +111,13 @@ function App() {
         {message && <p className="error-message">{message}</p>}
         {result && <ResultCard result={result} />}
       </section>
+
+      <HistorySection
+        history={history}
+        isLoading={isHistoryLoading}
+        message={historyMessage}
+        onRefresh={loadHistory}
+      />
     </main>
   );
 }
@@ -106,6 +144,66 @@ function ResultCard({ result }) {
         {result.error && <ResultRow label="Error" value={result.error} />}
       </dl>
     </article>
+  );
+}
+
+function HistorySection({ history, isLoading, message, onRefresh }) {
+  return (
+    <section className="history-panel" aria-label="Recent check history">
+      <div className="history-header">
+        <div>
+          <p className="section-label">Recent History</p>
+          <h2>Saved Checks</h2>
+        </div>
+        <button type="button" className="secondary-button" onClick={onRefresh} disabled={isLoading}>
+          {isLoading ? "Refreshing..." : "Refresh History"}
+        </button>
+      </div>
+
+      {isLoading && <p className="status-message">Loading recent checks...</p>}
+      {message && <p className="error-message">{message}</p>}
+      {!isLoading && !message && history.length === 0 && (
+        <p className="empty-message">No saved checks yet.</p>
+      )}
+      {!message && history.length > 0 && <HistoryTable history={history} />}
+    </section>
+  );
+}
+
+function HistoryTable({ history }) {
+  return (
+    <div className="history-table-wrap">
+      <table className="history-table">
+        <thead>
+          <tr>
+            <th scope="col">Host</th>
+            <th scope="col">URL</th>
+            <th scope="col">Status</th>
+            <th scope="col">HTTP</th>
+            <th scope="col">Time</th>
+            <th scope="col">Checked</th>
+            <th scope="col">Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          {history.map((check) => (
+            <tr key={check.id}>
+              <td>{check.hostname ?? "Not available"}</td>
+              <td>{check.normalized_url ?? check.input_url ?? "Not available"}</td>
+              <td>
+                <span className={check.is_up ? "badge badge-up" : "badge badge-down"}>
+                  {check.is_up ? "Up" : "Down"}
+                </span>
+              </td>
+              <td>{check.status_code ?? "Not available"}</td>
+              <td>{formatResponseTime(check.response_time_ms) ?? "Not available"}</td>
+              <td>{formatDate(check.checked_at) ?? "Not available"}</td>
+              <td>{check.error ?? "None"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

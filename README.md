@@ -20,11 +20,12 @@ Completed so far:
 * SQLite-backed check history
 * `GET /api/history` endpoint
 * Basic React frontend website check form
+* React frontend recent history display
 * Pytest coverage for URL normalization, SQLite storage, and API history behavior
 
 Next planned milestone:
 
-* Display saved check history in the React frontend
+* UI polish, screenshots, and deployment prep
 
 ## Features
 
@@ -41,6 +42,10 @@ Currently implemented:
 * React frontend form for submitting website checks
 
 * Frontend result card for availability, response time, DNS/IP details, redirect target, timestamp, and errors
+
+* Frontend recent history table loaded from `GET /api/history?limit=10`
+
+* Refreshable saved check history after new website checks
 
 * Automatic URL normalization
 
@@ -67,7 +72,6 @@ Currently implemented:
 
 Planned features:
 
-* History table
 * Screenshots
 * Deployment notes
 
@@ -144,10 +148,11 @@ Run the frontend dev server:
 npm run dev
 ```
 
-The frontend will run at the URL shown by Vite, usually:
+The frontend will run at the URL shown by Vite, usually one of:
 
 ```text
 http://127.0.0.1:5173
+http://localhost:5173
 ```
 
 The backend must also be running at:
@@ -160,6 +165,12 @@ The website check form sends requests to:
 
 ```text
 POST http://127.0.0.1:8000/api/check
+```
+
+The recent history table loads saved checks from:
+
+```text
+GET http://127.0.0.1:8000/api/history?limit=10
 ```
 
 Build the frontend:

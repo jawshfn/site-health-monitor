@@ -61,6 +61,15 @@ h1 {
   padding: 24px;
 }
 
+.history-panel {
+  background: #ffffff;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  box-shadow: 0 18px 45px rgba(32, 45, 65, 0.08);
+  margin-top: 24px;
+  padding: 24px;
+}
+
 .check-form label {
   display: block;
   font-weight: 700;
@@ -104,12 +113,20 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.secondary-button {
+  background: #f4f7fa;
+  border: 1px solid #c7d0dd;
+  color: #162033;
+}
+
 .status-message,
-.error-message {
+.error-message,
+.empty-message {
   margin: 18px 0 0;
 }
 
-.status-message {
+.status-message,
+.empty-message {
   color: #56657a;
 }
 
@@ -182,12 +199,62 @@ dd {
   overflow-wrap: anywhere;
 }
 
+.history-header {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.history-header h2 {
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.section-label {
+  color: #1f6f78;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+
+.history-table-wrap {
+  overflow-x: auto;
+}
+
+.history-table {
+  border-collapse: collapse;
+  min-width: 820px;
+  width: 100%;
+}
+
+.history-table th,
+.history-table td {
+  border-top: 1px solid #edf0f5;
+  padding: 12px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.history-table th {
+  color: #56657a;
+  font-size: 0.84rem;
+}
+
+.history-table td {
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 640px) {
   .app-shell {
     padding: 32px 0;
   }
 
-  .checker-panel {
+  .checker-panel,
+  .history-panel {
     padding: 18px;
   }
 
@@ -198,5 +265,10 @@ dd {
 
   button {
     width: 100%;
+  }
+
+  .history-header {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
