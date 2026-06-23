@@ -224,6 +224,75 @@ button:disabled {
   gap: 14px;
 }
 
+.check-all-bar {
+  align-items: center;
+  background: #edf8f9;
+  border: 1px solid #cbe5e8;
+  border-radius: 8px;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding: 16px;
+}
+
+.check-all-bar h3 {
+  color: #111827;
+  font-size: 1rem;
+  margin: 0 0 4px;
+}
+
+.check-all-bar p {
+  color: #526176;
+  margin: 0;
+}
+
+.check-all-summary {
+  border-left: 4px solid #1f6f78;
+  border-top: 1px solid #e2e7ef;
+  margin: 18px 0;
+  padding: 18px 0 0 18px;
+}
+
+.check-all-results {
+  display: grid;
+  gap: 12px;
+}
+
+.check-all-result {
+  align-items: start;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(280px, 0.9fr);
+  padding: 14px;
+}
+
+.check-all-result h4 {
+  color: #111827;
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
+}
+
+.check-all-result p {
+  color: #1f6f78;
+  font-weight: 800;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.check-all-result dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.check-all-result div {
+  min-width: 0;
+}
+
 .site-card {
   align-items: start;
   background: #ffffff;
@@ -455,7 +524,8 @@ dd {
   .result-summary,
   .saved-site-form,
   .site-card,
-  .site-meta {
+  .site-meta,
+  .check-all-result {
     grid-template-columns: 1fr;
   }
 
@@ -474,6 +544,11 @@ dd {
   }
 
   .site-actions {
+    flex-direction: column;
+  }
+
+  .check-all-bar {
+    align-items: stretch;
     flex-direction: column;
   }
 

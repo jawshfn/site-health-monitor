@@ -25,11 +25,12 @@ Completed so far:
 * React frontend recent history display
 * Polished React frontend layout for readability and responsiveness
 * React frontend saved-sites/watchlist UI
+* Frontend Check All Saved Sites button and dashboard summary
 * Pytest coverage for URL normalization, SQLite storage, and API history behavior
 
 Next planned milestone:
 
-* Add a frontend Check All Saved Sites button and dashboard summary
+* Add screenshots to the README
 
 ## Features
 
@@ -55,6 +56,8 @@ Currently implemented:
 * React frontend form for submitting website checks
 
 * React frontend saved-sites/watchlist UI for creating, checking, refreshing, and deleting monitored sites
+
+* Frontend Check All Saved Sites button with total/up/down summary and per-site results
 
 * Frontend result card for availability, response time, DNS/IP details, redirect target, timestamp, and errors
 
@@ -89,7 +92,6 @@ Currently implemented:
 
 Planned features:
 
-* Frontend Check All Saved Sites button and dashboard summary
 * Screenshots
 * Deployment notes
 
@@ -197,7 +199,7 @@ The saved-sites/watchlist section loads monitored sites from:
 GET http://127.0.0.1:8000/api/sites
 ```
 
-From the frontend, users can save monitored sites, delete saved sites, and run a check for an individual saved site.
+From the frontend, users can save monitored sites, delete saved sites, run a check for an individual saved site, and check all saved sites at once.
 
 Build the frontend:
 

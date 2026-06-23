@@ -4,6 +4,7 @@ import "./App.css";
 const CHECK_API_URL = "http://127.0.0.1:8000/api/check";
 const HISTORY_API_URL = "http://127.0.0.1:8000/api/history?limit=10";
 const SITES_API_URL = "http://127.0.0.1:8000/api/sites";
+const CHECK_ALL_API_URL = "http://127.0.0.1:8000/api/sites/check-all";
 
 function App() {
   const [url, setUrl] = useState("");
@@ -17,6 +18,9 @@ function App() {
   const [isSavingSite, setIsSavingSite] = useState(false);
   const [checkingSiteId, setCheckingSiteId] = useState(null);
   const [deletingSiteId, setDeletingSiteId] = useState(null);
+  const [isCheckingAllSites, setIsCheckingAllSites] = useState(false);
+  const [checkAllResult, setCheckAllResult] = useState(null);
+  const [checkAllMessage, setCheckAllMessage] = useState("");
   const [sitesMessage, setSitesMessage] = useState("");
   const [history, setHistory] = useState([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
@@ -157,6 +161,41 @@ function App() {
     }
   }
 
+  async function checkAllSavedSites() {
+    if (savedSites.length === 0) {
+      setCheckAllMessage("Save at least one site before running Check All.");
+      setCheckAllResult(null);
+      return;
+    }
+
+    setIsCheckingAllSites(true);
+    setCheckAllMessage("");
+    setCheckAllResult(null);
+
+    try {
+      const response = await fetch(CHECK_ALL_API_URL, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.detail ?? `Check all failed with status ${response.status}.`);
+      }
+
+      const data = await response.json();
+      setCheckAllResult(data);
+      await loadHistory();
+    } catch (error) {
+      setCheckAllMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not check saved sites. Make sure the backend is running."
+      );
+    } finally {
+      setIsCheckingAllSites(false);
+    }
+  }
+
   async function checkUrl(urlToCheck) {
     const response = await fetch(CHECK_API_URL, {
       method: "POST",
@@ -248,12 +287,16 @@ function App() {
         isSaving={isSavingSite}
         checkingSiteId={checkingSiteId}
         deletingSiteId={deletingSiteId}
+        isCheckingAll={isCheckingAllSites}
+        checkAllResult={checkAllResult}
+        checkAllMessage={checkAllMessage}
         message={sitesMessage}
         onSiteUrlChange={setSiteUrl}
         onSiteNameChange={setSiteName}
         onSave={saveSite}
         onRefresh={loadSavedSites}
         onCheck={checkSavedSite}
+        onCheckAll={checkAllSavedSites}
         onDelete={deleteSavedSite}
       />
 
@@ -275,12 +318,16 @@ function SavedSitesSection({
   isSaving,
   checkingSiteId,
   deletingSiteId,
+  isCheckingAll,
+  checkAllResult,
+  checkAllMessage,
   message,
   onSiteUrlChange,
   onSiteNameChange,
   onSave,
   onRefresh,
   onCheck,
+  onCheckAll,
   onDelete,
 }) {
   return (
@@ -329,20 +376,75 @@ function SavedSitesSection({
         <p className="empty-message">No saved sites yet.</p>
       )}
       {sites.length > 0 && (
-        <div className="site-list">
-          {sites.map((site) => (
-            <SavedSiteCard
-              key={site.id}
-              site={site}
-              isChecking={checkingSiteId === site.id}
-              isDeleting={deletingSiteId === site.id}
-              onCheck={onCheck}
-              onDelete={onDelete}
-            />
+        <>
+          <div className="check-all-bar">
+            <div>
+              <h3>Run all saved checks</h3>
+              <p>Check every saved site and add the results to recent history.</p>
+            </div>
+            <button type="button" onClick={onCheckAll} disabled={isCheckingAll}>
+              {isCheckingAll ? "Checking All..." : "Check All Saved Sites"}
+            </button>
+          </div>
+
+          {checkAllMessage && <p className="error-message">{checkAllMessage}</p>}
+          {checkAllResult && <CheckAllSummary summary={checkAllResult} />}
+
+          <div className="site-list">
+            {sites.map((site) => (
+              <SavedSiteCard
+                key={site.id}
+                site={site}
+                isChecking={checkingSiteId === site.id}
+                isDeleting={deletingSiteId === site.id}
+                onCheck={onCheck}
+                onDelete={onDelete}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+function CheckAllSummary({ summary }) {
+  return (
+    <article className="check-all-summary">
+      <div className="result-summary" aria-label="Check all summary">
+        <SummaryItem label="Total" value={summary.total} />
+        <SummaryItem label="Up" value={summary.up} />
+        <SummaryItem label="Down" value={summary.down} />
+      </div>
+
+      {summary.results.length > 0 && (
+        <div className="check-all-results">
+          {summary.results.map((result) => (
+            <div className="check-all-result" key={result.site_id}>
+              <div>
+                <h4>{result.name || result.hostname || result.normalized_url}</h4>
+                <p>{result.normalized_url}</p>
+              </div>
+              <StatusBadge isUp={result.is_up} />
+              <dl>
+                <div>
+                  <dt>HTTP</dt>
+                  <dd>{result.status_code ?? "Not available"}</dd>
+                </div>
+                <div>
+                  <dt>Response</dt>
+                  <dd>{formatResponseTime(result.response_time_ms) ?? "Not available"}</dd>
+                </div>
+                <div>
+                  <dt>Error</dt>
+                  <dd>{result.error ?? "None"}</dd>
+                </div>
+              </dl>
+            </div>
           ))}
         </div>
       )}
-    </section>
+    </article>
   );
 }
 
