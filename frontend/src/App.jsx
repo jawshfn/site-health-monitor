@@ -1,13 +1,39 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
-const CHECK_API_URL = "http://127.0.0.1:8000/api/check";
-const HISTORY_API_URL = "http://127.0.0.1:8000/api/history";
+const LOCAL_API_BASE_URL = "http://127.0.0.1:8000";
+const CONFIGURED_API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim();
+const API_BASE_URL = CONFIGURED_API_BASE_URL || (import.meta.env.DEV ? LOCAL_API_BASE_URL : "");
 const HISTORY_PAGE_SIZE = 10;
-const CLEAR_HISTORY_API_URL = "http://127.0.0.1:8000/api/history";
-const SUMMARY_API_URL = "http://127.0.0.1:8000/api/summary";
-const SITES_API_URL = "http://127.0.0.1:8000/api/sites";
-const CHECK_ALL_API_URL = "http://127.0.0.1:8000/api/sites/check-all";
+const BACKEND_UNAVAILABLE_MESSAGE = API_BASE_URL
+  ? `Could not reach the backend API at ${API_BASE_URL}. Run the FastAPI backend locally to perform live checks.`
+  : "The backend API is not connected in this static demo. Run the FastAPI backend locally to perform live checks.";
+
+class BackendUnavailableError extends Error {}
+
+function buildApiUrl(path) {
+  return `${API_BASE_URL}${path}`;
+}
+
+async function apiFetch(path, options) {
+  if (!API_BASE_URL) {
+    throw new BackendUnavailableError(BACKEND_UNAVAILABLE_MESSAGE);
+  }
+
+  return fetch(buildApiUrl(path), options);
+}
+
+function getRequestErrorMessage(error, fallbackMessage) {
+  if (error instanceof BackendUnavailableError || error instanceof TypeError) {
+    return BACKEND_UNAVAILABLE_MESSAGE;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallbackMessage;
+}
 
 function App() {
   const [url, setUrl] = useState("");
@@ -58,7 +84,7 @@ function App() {
     setSummaryMessage("");
 
     try {
-      const response = await fetch(SUMMARY_API_URL);
+      const response = await apiFetch("/api/summary");
 
       if (!response.ok) {
         throw new Error(`Summary request failed with status ${response.status}.`);
@@ -67,8 +93,10 @@ function App() {
       const data = await response.json();
       setSummary(data);
     } catch (error) {
-      setSummaryMessage(
-        "Could not load dashboard summary. Make sure the backend is running at http://127.0.0.1:8000."
+      setSummaryMessage(getRequestErrorMessage(
+        error,
+        "Could not load dashboard summary. Run the FastAPI backend locally to view live data."
+      )
       );
     } finally {
       setIsSummaryLoading(false);
@@ -105,7 +133,7 @@ function App() {
         query.set("search", cleanedSearch);
       }
 
-      const response = await fetch(`${HISTORY_API_URL}?${query.toString()}`);
+      const response = await apiFetch(`/api/history?${query.toString()}`);
 
       if (!response.ok) {
         throw new Error(`History request failed with status ${response.status}.`);
@@ -116,8 +144,10 @@ function App() {
       setHistoryTotal(data.total);
       setHasMoreHistory(data.has_more);
     } catch (error) {
-      setHistoryMessage(
-        "Could not load recent history. Make sure the backend is running at http://127.0.0.1:8000."
+      setHistoryMessage(getRequestErrorMessage(
+        error,
+        "Could not load recent history. Run the FastAPI backend locally to view live data."
+      )
       );
     } finally {
       setIsHistoryLoading(false);
@@ -149,7 +179,7 @@ function App() {
     setHistoryNotice("");
 
     try {
-      const response = await fetch(CLEAR_HISTORY_API_URL, {
+      const response = await apiFetch("/api/history", {
         method: "DELETE",
       });
 
@@ -165,10 +195,10 @@ function App() {
       setHistoryNotice(`Cleared ${data.deleted_count} saved check results.`);
       await loadSummary();
     } catch (error) {
-      setHistoryMessage(
-        error instanceof Error
-          ? error.message
-          : "Could not clear history. Make sure the backend is running."
+      setHistoryMessage(getRequestErrorMessage(
+        error,
+        "Could not clear history. Run the FastAPI backend locally to manage history."
+      )
       );
     } finally {
       setIsClearingHistory(false);
@@ -180,7 +210,7 @@ function App() {
     setSitesMessage("");
 
     try {
-      const response = await fetch(SITES_API_URL);
+      const response = await apiFetch("/api/sites");
 
       if (!response.ok) {
         throw new Error(`Saved sites request failed with status ${response.status}.`);
@@ -193,8 +223,10 @@ function App() {
       clearCheckAllResults();
       await loadSummary();
     } catch (error) {
-      setSitesMessage(
-        "Could not load saved sites. Make sure the backend is running at http://127.0.0.1:8000."
+      setSitesMessage(getRequestErrorMessage(
+        error,
+        "Could not load saved sites. Run the FastAPI backend locally to view live data."
+      )
       );
     } finally {
       setIsSitesLoading(false);
@@ -216,7 +248,7 @@ function App() {
     setSitesMessage("");
 
     try {
-      const response = await fetch(SITES_API_URL, {
+      const response = await apiFetch("/api/sites", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -236,10 +268,10 @@ function App() {
       setSiteName("");
       await loadSavedSites();
     } catch (error) {
-      setSitesMessage(
-        error instanceof Error
-          ? error.message
-          : "Could not save the site. Make sure the backend is running."
+      setSitesMessage(getRequestErrorMessage(
+        error,
+        "Could not save the site. Run the FastAPI backend locally to manage saved sites."
+      )
       );
     } finally {
       setIsSavingSite(false);
@@ -257,8 +289,10 @@ function App() {
       await loadHistory();
       await loadSummary();
     } catch (error) {
-      setMessage(
-        "Could not check the saved site. Make sure the backend is running at http://127.0.0.1:8000."
+      setMessage(getRequestErrorMessage(
+        error,
+        "Could not check the saved site. Run the FastAPI backend locally to perform live checks."
+      )
       );
     } finally {
       setCheckingSiteId(null);
@@ -270,7 +304,7 @@ function App() {
     setSitesMessage("");
 
     try {
-      const response = await fetch(`${SITES_API_URL}/${siteId}`, {
+      const response = await apiFetch(`/api/sites/${siteId}`, {
         method: "DELETE",
       });
 
@@ -282,8 +316,10 @@ function App() {
       clearCheckAllResults();
       await loadSummary();
     } catch (error) {
-      setSitesMessage(
-        "Could not delete the saved site. Make sure the backend is running at http://127.0.0.1:8000."
+      setSitesMessage(getRequestErrorMessage(
+        error,
+        "Could not delete the saved site. Run the FastAPI backend locally to manage saved sites."
+      )
       );
     } finally {
       setDeletingSiteId(null);
@@ -307,7 +343,7 @@ function App() {
     setSitesMessage("");
 
     try {
-      const response = await fetch(`${SITES_API_URL}/${siteId}`, {
+      const response = await apiFetch(`/api/sites/${siteId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -331,10 +367,10 @@ function App() {
       clearCheckAllResults();
       await loadSummary();
     } catch (error) {
-      setSitesMessage(
-        error instanceof Error
-          ? error.message
-          : "Could not update the saved site. Make sure the backend is running."
+      setSitesMessage(getRequestErrorMessage(
+        error,
+        "Could not update the saved site. Run the FastAPI backend locally to manage saved sites."
+      )
       );
     } finally {
       setSavingSiteNameId(null);
@@ -353,7 +389,7 @@ function App() {
     setCheckAllResult(null);
 
     try {
-      const response = await fetch(CHECK_ALL_API_URL, {
+      const response = await apiFetch("/api/sites/check-all", {
         method: "POST",
       });
 
@@ -367,10 +403,10 @@ function App() {
       await loadHistory();
       await loadSummary();
     } catch (error) {
-      setCheckAllMessage(
-        error instanceof Error
-          ? error.message
-          : "Could not check saved sites. Make sure the backend is running."
+      setCheckAllMessage(getRequestErrorMessage(
+        error,
+        "Could not check saved sites. Run the FastAPI backend locally to perform live checks."
+      )
       );
     } finally {
       setIsCheckingAllSites(false);
@@ -378,7 +414,7 @@ function App() {
   }
 
   async function checkUrl(urlToCheck) {
-    const response = await fetch(CHECK_API_URL, {
+    const response = await apiFetch("/api/check", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -413,8 +449,10 @@ function App() {
       await loadHistory();
       await loadSummary();
     } catch (error) {
-      setMessage(
-        "Could not check the site. Make sure the backend is running at http://127.0.0.1:8000."
+      setMessage(getRequestErrorMessage(
+        error,
+        "Could not check the site. Run the FastAPI backend locally to perform live checks."
+      )
       );
     } finally {
       setIsChecking(false);
@@ -433,6 +471,8 @@ function App() {
           </p>
         </div>
       </section>
+
+      {!API_BASE_URL && <StaticDemoNotice />}
 
       <DashboardSummary
         summary={summary}
@@ -517,6 +557,19 @@ function App() {
         onStatusChange={updateHistoryStatus}
       />
     </main>
+  );
+}
+
+function StaticDemoNotice() {
+  return (
+    <section className="demo-notice" aria-label="Static demo notice">
+      <h2>Frontend-only demo</h2>
+      <p>
+        This GitHub Pages version shows the React interface, but the backend API is not
+        connected. Run the FastAPI backend locally to perform live website checks,
+        load saved sites, and view check history.
+      </p>
+    </section>
   );
 }
 

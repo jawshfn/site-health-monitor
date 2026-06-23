@@ -63,6 +63,7 @@ h1 {
 }
 
 .checker-panel,
+.demo-notice,
 .history-panel,
 .summary-panel,
 .sites-panel {
@@ -74,9 +75,29 @@ h1 {
 }
 
 .history-panel,
+.demo-notice,
 .summary-panel,
 .sites-panel {
   margin-top: 24px;
+}
+
+.demo-notice {
+  background: #fff9ed;
+  border-color: #f1cf8a;
+  box-shadow: none;
+  margin-bottom: 24px;
+}
+
+.demo-notice h2 {
+  color: #7a4b0b;
+  font-size: 1.15rem;
+  margin: 0 0 8px;
+}
+
+.demo-notice p {
+  color: #67430f;
+  line-height: 1.5;
+  margin: 0;
 }
 
 .summary-panel {

@@ -6,6 +6,10 @@ Site Health Monitor is a full-stack monitoring dashboard for checking what a loc
 
 The app is designed as a portfolio project: practical enough to use locally, small enough to understand quickly, and tested through a GitHub Actions CI workflow.
 
+**Live demo:** [https://jawshfn.github.io/site-health-monitor/](https://jawshfn.github.io/site-health-monitor/)
+
+The live GitHub Pages demo is frontend-only. Live website checks, saved sites, history, and dashboard data require the FastAPI backend to be running locally unless a backend is deployed separately later.
+
 ## Screenshots
 
 ### Latest result diagnostics
@@ -31,6 +35,7 @@ The app is designed as a portfolio project: practical enough to use locally, sma
 * Store check history locally with pagination, status filters, hostname/URL search, and clear-history support
 * Use a responsive React frontend with readable result cards, status badges, saved-site controls, and history layout
 * Run backend tests and frontend builds automatically with GitHub Actions CI
+* Deploy the frontend-only React demo to GitHub Pages
 
 ## Tech Stack
 
@@ -100,6 +105,8 @@ http://127.0.0.1:5173
 
 The backend must be running for website checks, saved sites, history, and dashboard summary data to load.
 
+For a custom deployed backend, build the frontend with `VITE_API_BASE_URL` set to the backend URL. Local development defaults to `http://127.0.0.1:8000`.
+
 ## Testing and CI
 
 Run the backend tests from the `backend/` folder:
@@ -114,7 +121,7 @@ Build the frontend from the `frontend/` folder:
 npm run build
 ```
 
-GitHub Actions runs the backend test suite with Python 3.12 and the frontend production build with Node 20 on every push and pull request.
+GitHub Actions runs the backend test suite with Python 3.12 and the frontend production build with Node 20 on every push and pull request. A separate Pages workflow deploys the static frontend from `frontend/dist` on pushes to `main`.
 
 ## API Overview
 
