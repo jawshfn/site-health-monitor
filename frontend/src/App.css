@@ -17,7 +17,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -96,7 +97,8 @@ h1 {
   grid-template-columns: 1fr auto;
 }
 
-input {
+input,
+select {
   background: #ffffff;
   border: 1px solid #bdc8d6;
   border-radius: 8px;
@@ -110,7 +112,8 @@ input::placeholder {
   color: #7a8798;
 }
 
-input:focus {
+input:focus,
+select:focus {
   border-color: #1f6f78;
   outline: 3px solid rgba(31, 111, 120, 0.18);
 }
@@ -600,6 +603,25 @@ dd {
   overflow-x: auto;
 }
 
+.history-filters {
+  align-items: end;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.35fr);
+  margin-bottom: 18px;
+  padding: 16px;
+}
+
+.history-filter-field label {
+  color: #111827;
+  display: block;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
 .history-count {
   color: #526176;
   font-weight: 800;
@@ -662,6 +684,7 @@ dd {
   .form-row,
   .dashboard-grid,
   .diagnostics-grid,
+  .history-filters,
   .result-row,
   .result-summary,
   .saved-site-form,

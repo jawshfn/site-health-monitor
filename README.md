@@ -18,7 +18,7 @@ Screenshots coming soon.
 * Edit saved-site friendly names
 * Check individual saved sites or check all saved sites at once
 * Store check history in SQLite
-* Browse older history with Load More pagination
+* Browse older history with Load More pagination, observed-status filters, and hostname/URL search
 * Clear check history without deleting saved monitored sites
 * Responsive React frontend with observed-result badges, result cards, and mobile-friendly history display
 * Backend tests for URL normalization, storage behavior, API endpoints, saved sites, history pagination, and check-all behavior
@@ -105,7 +105,7 @@ npm run build
 | `GET`    | `/api/health`                    | Check whether the backend is running             |
 | `GET`    | `/api/summary`                   | View dashboard totals from local SQLite data     |
 | `POST`   | `/api/check`                     | Check one website and save the result to history |
-| `GET`    | `/api/history?limit=10&offset=0` | View paginated check history                     |
+| `GET`    | `/api/history?limit=10&offset=0` | View paginated and filterable check history      |
 | `DELETE` | `/api/history`                   | Clear saved check history                        |
 | `GET`    | `/api/sites`                     | List saved monitored sites                       |
 | `POST`   | `/api/sites`                     | Save a monitored site                            |
@@ -145,6 +145,15 @@ Example website check response:
 }
 ```
 
+Example filtered history request:
+
+```text
+GET /api/history?limit=10&offset=0&status_label=timeout&search=example
+```
+
+Use `status_label=issue` to return all non-healthy observed results.
+Search terms shorter than 2 characters are ignored.
+
 ## Local Data
 
 Website check history and saved monitored sites are stored locally in SQLite. Database files are intentionally ignored by git so local runtime data is not committed.
@@ -161,7 +170,6 @@ Ignored database file types include:
 
 Planned improvements:
 
-* History filtering and search
 * Per-site detail summaries
 * Response time trends
 * Screenshots and deployment notes

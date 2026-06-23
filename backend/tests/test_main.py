@@ -425,3 +425,210 @@ def test_history_endpoint_supports_limit_offset_total_and_has_more(monkeypatch, 
     assert final_page["offset"] == 4
     assert final_page["has_more"] is False
     assert [item["input_url"] for item in final_page["items"]] == ["example-0.com"]
+
+
+def test_history_endpoint_filters_by_exact_status_label(monkeypatch, tmp_path):
+    _seed_history_filter_checks(monkeypatch, tmp_path)
+
+    client = TestClient(app)
+    response = client.get("/api/history?status_label=timeout")
+
+    assert response.status_code == 200
+    history = response.json()
+    assert history["total"] == 1
+    assert history["status_label"] == "timeout"
+    assert history["items"][0]["hostname"] == "slow.example"
+    assert history["items"][0]["status_label"] == "timeout"
+
+
+def test_history_endpoint_issue_filter_returns_non_healthy_checks(monkeypatch, tmp_path):
+    _seed_history_filter_checks(monkeypatch, tmp_path)
+
+    client = TestClient(app)
+    response = client.get("/api/history?status_label=issue")
+
+    assert response.status_code == 200
+    history = response.json()
+    assert history["total"] == 3
+    assert {item["status_label"] for item in history["items"]} == {
+        "http_error",
+        "timeout",
+        "dns_error",
+    }
+
+
+def test_history_endpoint_searches_hostname_and_url(monkeypatch, tmp_path):
+    _seed_history_filter_checks(monkeypatch, tmp_path)
+
+    client = TestClient(app)
+    hostname_response = client.get("/api/history?search=api")
+    url_response = client.get("/api/history?search=docs.example")
+
+    assert hostname_response.status_code == 200
+    assert hostname_response.json()["total"] == 1
+    assert hostname_response.json()["items"][0]["hostname"] == "api.example.com"
+
+    assert url_response.status_code == 200
+    assert url_response.json()["total"] == 1
+    assert url_response.json()["items"][0]["normalized_url"] == "https://docs.example.com"
+
+
+def test_history_endpoint_empty_search_returns_unfiltered_results(monkeypatch, tmp_path):
+    _seed_history_filter_checks(monkeypatch, tmp_path)
+
+    client = TestClient(app)
+    response = client.get("/api/history?search=   ")
+
+    assert response.status_code == 200
+    history = response.json()
+    assert history["total"] == 5
+    assert history["search"] is None
+
+
+def test_history_endpoint_one_character_search_is_ignored(monkeypatch, tmp_path):
+    _seed_history_filter_checks(monkeypatch, tmp_path)
+
+    client = TestClient(app)
+    response = client.get("/api/history?search=m")
+
+    assert response.status_code == 200
+    history = response.json()
+    assert history["total"] == 5
+    assert history["search"] is None
+
+
+def test_history_endpoint_two_character_search_filters_results(monkeypatch, tmp_path):
+    _seed_history_filter_checks(monkeypatch, tmp_path)
+
+    client = TestClient(app)
+    response = client.get("/api/history?search=sl")
+
+    assert response.status_code == 200
+    history = response.json()
+    assert history["total"] == 1
+    assert history["search"] == "sl"
+    assert history["items"][0]["hostname"] == "slow.example"
+
+
+def test_history_endpoint_combines_filter_search_total_and_items(monkeypatch, tmp_path):
+    _seed_history_filter_checks(monkeypatch, tmp_path)
+
+    client = TestClient(app)
+    response = client.get("/api/history?status_label=issue&search=example.com")
+
+    assert response.status_code == 200
+    history = response.json()
+    assert history["total"] == 1
+    assert history["search"] == "example.com"
+    assert history["items"][0]["hostname"] == "api.example.com"
+    assert history["items"][0]["status_label"] == "http_error"
+
+
+def test_history_endpoint_paginates_filtered_results(monkeypatch, tmp_path):
+    _seed_history_filter_checks(monkeypatch, tmp_path)
+
+    client = TestClient(app)
+    first_page = client.get("/api/history?status_label=healthy&limit=1&offset=0").json()
+    second_page = client.get("/api/history?status_label=healthy&limit=1&offset=1").json()
+
+    assert first_page["total"] == 2
+    assert first_page["has_more"] is True
+    assert len(first_page["items"]) == 1
+    assert first_page["items"][0]["hostname"] == "docs.example.com"
+
+    assert second_page["total"] == 2
+    assert second_page["has_more"] is False
+    assert len(second_page["items"]) == 1
+    assert second_page["items"][0]["hostname"] == "example.com"
+
+
+def _seed_history_filter_checks(monkeypatch, tmp_path):
+    db_path = tmp_path / "history-filter.db"
+    monkeypatch.setattr(storage, "DATABASE_PATH", db_path)
+
+    check_results = {
+        "example.com": _history_filter_result(
+            input_url="example.com",
+            normalized_url="https://example.com",
+            final_url="https://example.com",
+            hostname="example.com",
+            is_up=True,
+            status_label="healthy",
+            status_code=200,
+        ),
+        "api.example.com/missing": _history_filter_result(
+            input_url="api.example.com/missing",
+            normalized_url="https://api.example.com/missing",
+            final_url="https://api.example.com/missing",
+            hostname="api.example.com",
+            is_up=False,
+            status_label="http_error",
+            status_code=404,
+        ),
+        "slow.example": _history_filter_result(
+            input_url="slow.example",
+            normalized_url="https://slow.example",
+            final_url=None,
+            hostname="slow.example",
+            is_up=False,
+            status_label="timeout",
+            status_code=None,
+        ),
+        "missing.test": _history_filter_result(
+            input_url="missing.test",
+            normalized_url="https://missing.test",
+            final_url=None,
+            hostname="missing.test",
+            is_up=False,
+            status_label="dns_error",
+            status_code=None,
+        ),
+        "docs.example": _history_filter_result(
+            input_url="docs.example",
+            normalized_url="https://docs.example.com",
+            final_url="https://docs.example.com",
+            hostname="docs.example.com",
+            is_up=True,
+            status_label="healthy",
+            status_code=200,
+        ),
+    }
+
+    def fake_check_website(url):
+        return check_results[url]
+
+    monkeypatch.setattr("app.main.check_website", fake_check_website)
+
+    client = TestClient(app)
+    for url in check_results:
+        client.post("/api/check", json={"url": url})
+
+
+def _history_filter_result(
+    input_url,
+    normalized_url,
+    final_url,
+    hostname,
+    is_up,
+    status_label,
+    status_code,
+):
+    return {
+        "input_url": input_url,
+        "normalized_url": normalized_url,
+        "final_url": final_url,
+        "hostname": hostname,
+        "status_code": status_code,
+        "is_up": is_up,
+        "status_label": status_label,
+        "failure_type": None if is_up else status_label,
+        "failure_stage": None if is_up else "http",
+        "dns_status": "resolved" if status_label != "dns_error" else "failed",
+        "connection_status": "connected" if status_label not in ("dns_error",) else "not_checked",
+        "http_status": "response_received" if status_code else "not_attempted",
+        "diagnostic_summary": f"Observed {status_label}.",
+        "response_time_ms": 42 if status_code else None,
+        "ip_addresses": [],
+        "checked_at": "2026-06-23T12:00:00+00:00",
+        "error": None if is_up else f"Observed {status_label}.",
+    }

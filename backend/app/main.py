@@ -6,6 +6,17 @@ from urllib.parse import urlparse
 from app import storage
 from app.checker import check_website, normalize_url
 
+HISTORY_STATUS_FILTERS = {
+    "healthy",
+    "issue",
+    "http_error",
+    "timeout",
+    "dns_error",
+    "connection_error",
+    "invalid_url",
+    "unknown_error",
+}
+
 
 class WebsiteCheckRequest(BaseModel):
     url: str
@@ -67,15 +78,37 @@ def check_site(request: WebsiteCheckRequest):
 def check_history(
     limit: int = Query(default=10, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    status_label: str | None = Query(default=None),
+    search: str | None = Query(default=None),
 ):
-    items = storage.get_recent_checks(limit=limit, offset=offset)
-    total = storage.count_check_history()
+    cleaned_status = status_label.strip() if status_label else None
+    cleaned_search = search.strip() if search else None
+    if not cleaned_search:
+        cleaned_search = None
+    elif len(cleaned_search) < 2:
+        cleaned_search = None
+
+    if cleaned_status and cleaned_status not in HISTORY_STATUS_FILTERS:
+        raise HTTPException(status_code=400, detail="Unsupported history status filter.")
+
+    items = storage.get_recent_checks(
+        limit=limit,
+        offset=offset,
+        status_label=cleaned_status,
+        search=cleaned_search,
+    )
+    total = storage.count_check_history(
+        status_label=cleaned_status,
+        search=cleaned_search,
+    )
 
     return {
         "items": items,
         "total": total,
         "limit": limit,
         "offset": offset,
+        "status_label": cleaned_status,
+        "search": cleaned_search,
         "has_more": offset + len(items) < total,
     }
 

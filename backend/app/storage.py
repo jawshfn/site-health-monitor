@@ -121,15 +121,18 @@ def save_check_result(result: dict[str, Any], db_path: Path | str | None = None)
 def get_recent_checks(
     limit: int = 20,
     offset: int = 0,
+    status_label: str | None = None,
+    search: str | None = None,
     db_path: Path | str | None = None,
 ) -> list[dict[str, Any]]:
     initialize_database(db_path)
     path = _get_database_path(db_path)
+    where_clause, parameters = _build_history_filter_clause(status_label, search)
 
     with sqlite3.connect(path) as connection:
         connection.row_factory = sqlite3.Row
         rows = connection.execute(
-            """
+            f"""
             SELECT
                 id,
                 input_url,
@@ -150,22 +153,31 @@ def get_recent_checks(
                 diagnostic_summary,
                 checked_at
             FROM website_checks
+            {where_clause}
             ORDER BY id DESC
             LIMIT ?
             OFFSET ?
             """,
-            (limit, offset),
+            (*parameters, limit, offset),
         ).fetchall()
 
     return [_row_to_dict(row) for row in rows]
 
 
-def count_check_history(db_path: Path | str | None = None) -> int:
+def count_check_history(
+    db_path: Path | str | None = None,
+    status_label: str | None = None,
+    search: str | None = None,
+) -> int:
     initialize_database(db_path)
     path = _get_database_path(db_path)
+    where_clause, parameters = _build_history_filter_clause(status_label, search)
 
     with sqlite3.connect(path) as connection:
-        count = connection.execute("SELECT COUNT(*) FROM website_checks").fetchone()[0]
+        count = connection.execute(
+            f"SELECT COUNT(*) FROM website_checks {where_clause}",
+            parameters,
+        ).fetchone()[0]
 
     return int(count)
 
@@ -409,6 +421,48 @@ def _ensure_column(
 
     if column_name not in existing_column_names:
         connection.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
+
+
+def _build_history_filter_clause(
+    status_label: str | None = None,
+    search: str | None = None,
+) -> tuple[str, list[Any]]:
+    clauses: list[str] = []
+    parameters: list[Any] = []
+    cleaned_status = status_label.strip() if status_label else None
+    cleaned_search = search.strip() if search else None
+    if not cleaned_search:
+        cleaned_search = None
+    elif len(cleaned_search) < 2:
+        cleaned_search = None
+
+    if cleaned_status == "healthy":
+        clauses.append("(status_label = ? OR (status_label IS NULL AND is_up = 1))")
+        parameters.append("healthy")
+    elif cleaned_status == "issue":
+        clauses.append("is_up = 0")
+    elif cleaned_status:
+        clauses.append("status_label = ?")
+        parameters.append(cleaned_status)
+
+    if cleaned_search:
+        search_pattern = f"%{cleaned_search.lower()}%"
+        clauses.append(
+            """
+            (
+                LOWER(COALESCE(input_url, '')) LIKE ?
+                OR LOWER(COALESCE(normalized_url, '')) LIKE ?
+                OR LOWER(COALESCE(final_url, '')) LIKE ?
+                OR LOWER(COALESCE(hostname, '')) LIKE ?
+            )
+            """
+        )
+        parameters.extend([search_pattern, search_pattern, search_pattern, search_pattern])
+
+    if not clauses:
+        return "", parameters
+
+    return f"WHERE {' AND '.join(clauses)}", parameters
 
 
 def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:

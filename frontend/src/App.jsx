@@ -36,6 +36,8 @@ function App() {
   const [isClearingHistory, setIsClearingHistory] = useState(false);
   const [historyMessage, setHistoryMessage] = useState("");
   const [historyNotice, setHistoryNotice] = useState("");
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyStatus, setHistoryStatus] = useState("");
   const [summary, setSummary] = useState(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [summaryMessage, setSummaryMessage] = useState("");
@@ -73,7 +75,12 @@ function App() {
     }
   }
 
-  async function loadHistory({ offset = 0, append = false } = {}) {
+  async function loadHistory({
+    offset = 0,
+    append = false,
+    status = historyStatus,
+    search = historySearch,
+  } = {}) {
     if (append) {
       setIsLoadingMoreHistory(true);
     } else {
@@ -83,9 +90,22 @@ function App() {
     setHistoryNotice("");
 
     try {
-      const response = await fetch(
-        `${HISTORY_API_URL}?limit=${HISTORY_PAGE_SIZE}&offset=${offset}`
-      );
+      const query = new URLSearchParams({
+        limit: String(HISTORY_PAGE_SIZE),
+        offset: String(offset),
+      });
+      const cleanedStatus = status.trim();
+      const cleanedSearch = search.trim();
+
+      if (cleanedStatus) {
+        query.set("status_label", cleanedStatus);
+      }
+
+      if (cleanedSearch.length >= 2) {
+        query.set("search", cleanedSearch);
+      }
+
+      const response = await fetch(`${HISTORY_API_URL}?${query.toString()}`);
 
       if (!response.ok) {
         throw new Error(`History request failed with status ${response.status}.`);
@@ -103,6 +123,16 @@ function App() {
       setIsHistoryLoading(false);
       setIsLoadingMoreHistory(false);
     }
+  }
+
+  function updateHistorySearch(value) {
+    setHistorySearch(value);
+    loadHistory({ search: value, status: historyStatus });
+  }
+
+  function updateHistoryStatus(value) {
+    setHistoryStatus(value);
+    loadHistory({ status: value, search: historySearch });
   }
 
   async function clearHistory() {
@@ -478,9 +508,13 @@ function App() {
         isClearing={isClearingHistory}
         message={historyMessage}
         notice={historyNotice}
+        search={historySearch}
+        status={historyStatus}
         onRefresh={loadHistory}
         onLoadMore={() => loadHistory({ offset: history.length, append: true })}
         onClear={clearHistory}
+        onSearchChange={updateHistorySearch}
+        onStatusChange={updateHistoryStatus}
       />
     </main>
   );
@@ -846,10 +880,17 @@ function HistorySection({
   isClearing,
   message,
   notice,
+  search,
+  status,
   onRefresh,
   onLoadMore,
   onClear,
+  onSearchChange,
+  onStatusChange,
 }) {
+  const hasActiveSearch = search.trim().length >= 2;
+  const hasActiveFilters = hasActiveSearch || status;
+
   return (
     <section className="history-panel" aria-label="Recent check history">
       <div className="history-header">
@@ -867,11 +908,47 @@ function HistorySection({
         </div>
       </div>
 
+      <div className="history-filters" aria-label="History filters">
+        <div className="history-filter-field">
+          <label htmlFor="history-search">Search hostname or URL</label>
+          <input
+            id="history-search"
+            type="search"
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="example.com"
+            aria-describedby="history-search-help"
+            disabled={isClearing}
+          />
+          <p id="history-search-help" className="field-help">
+            Enter at least 2 characters to search.
+          </p>
+        </div>
+        <div className="history-filter-field">
+          <label htmlFor="history-status">Observed status</label>
+          <select
+            id="history-status"
+            value={status}
+            onChange={(event) => onStatusChange(event.target.value)}
+            disabled={isClearing}
+          >
+            <option value="">All statuses</option>
+            <option value="healthy">Healthy</option>
+            <option value="issue">Issues</option>
+            <option value="http_error">HTTP Error</option>
+            <option value="timeout">Timed Out</option>
+            <option value="dns_error">DNS Failed</option>
+          </select>
+        </div>
+      </div>
+
       {isLoading && <p className="status-message">Loading recent checks...</p>}
       {notice && <p className="success-message">{notice}</p>}
       {message && <p className="error-message">{message}</p>}
       {!isLoading && !message && history.length === 0 && (
-        <p className="empty-message">No saved checks yet.</p>
+        <p className="empty-message">
+          {hasActiveFilters ? "No saved checks match the current filters." : "No saved checks yet."}
+        </p>
       )}
       {!message && history.length > 0 && (
         <>
