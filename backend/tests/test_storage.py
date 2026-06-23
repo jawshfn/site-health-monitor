@@ -170,6 +170,52 @@ def test_create_and_list_saved_sites(tmp_path):
     assert sites[1]["name"] == "Example"
 
 
+def test_create_saved_site_rejects_duplicate_normalized_url(tmp_path):
+    db_path = tmp_path / "sites.db"
+    storage.create_saved_site(
+        url="example.com",
+        normalized_url="https://example.com",
+        hostname="example.com",
+        name="Example",
+        db_path=db_path,
+    )
+
+    try:
+        storage.create_saved_site(
+            url="https://example.com",
+            normalized_url="https://example.com",
+            hostname="example.com",
+            name="Duplicate Example",
+            db_path=db_path,
+        )
+    except storage.DuplicateSavedSiteError as exc:
+        assert str(exc) == "This site is already saved."
+    else:
+        raise AssertionError("Expected duplicate saved site to be rejected.")
+
+    sites = storage.get_saved_sites(db_path)
+    assert len(sites) == 1
+    assert sites[0]["url"] == "example.com"
+
+
+def test_get_saved_site_by_normalized_url(tmp_path):
+    db_path = tmp_path / "sites.db"
+    created_site = storage.create_saved_site(
+        url="example.com",
+        normalized_url="https://example.com",
+        hostname="example.com",
+        name="Example",
+        db_path=db_path,
+    )
+
+    found_site = storage.get_saved_site_by_normalized_url("https://example.com", db_path)
+    missing_site = storage.get_saved_site_by_normalized_url("https://missing.example", db_path)
+
+    assert found_site is not None
+    assert found_site["id"] == created_site["id"]
+    assert missing_site is None
+
+
 def test_delete_saved_site(tmp_path):
     db_path = tmp_path / "sites.db"
     site = storage.create_saved_site(

@@ -8,6 +8,10 @@ from typing import Any
 DATABASE_PATH = Path(__file__).resolve().parents[1] / "site_health.db"
 
 
+class DuplicateSavedSiteError(ValueError):
+    pass
+
+
 def initialize_database(db_path: Path | str | None = None) -> None:
     path = _get_database_path(db_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -152,6 +156,10 @@ def create_saved_site(
     path = _get_database_path(db_path)
     created_at = datetime.now(timezone.utc).isoformat()
 
+    existing_site = get_saved_site_by_normalized_url(normalized_url, db_path)
+    if existing_site is not None:
+        raise DuplicateSavedSiteError("This site is already saved.")
+
     with sqlite3.connect(path) as connection:
         connection.row_factory = sqlite3.Row
         cursor = connection.execute(
@@ -180,6 +188,30 @@ def create_saved_site(
             """,
             (created_id,),
         ).fetchone()
+
+    return dict(row)
+
+
+def get_saved_site_by_normalized_url(
+    normalized_url: str,
+    db_path: Path | str | None = None,
+) -> dict[str, Any] | None:
+    initialize_database(db_path)
+    path = _get_database_path(db_path)
+
+    with sqlite3.connect(path) as connection:
+        connection.row_factory = sqlite3.Row
+        row = connection.execute(
+            """
+            SELECT id, name, url, normalized_url, hostname, created_at
+            FROM saved_sites
+            WHERE normalized_url = ?
+            """,
+            (normalized_url,),
+        ).fetchone()
+
+    if row is None:
+        return None
 
     return dict(row)
 

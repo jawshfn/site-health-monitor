@@ -118,6 +118,39 @@ def test_saved_sites_endpoints_create_list_and_delete(monkeypatch, tmp_path):
     assert empty_list_response.json() == []
 
 
+def test_saved_sites_endpoint_rejects_duplicate_normalized_url(monkeypatch, tmp_path):
+    db_path = tmp_path / "sites.db"
+    monkeypatch.setattr(storage, "DATABASE_PATH", db_path)
+
+    client = TestClient(app)
+    first_response = client.post(
+        "/api/sites",
+        json={
+            "url": "example.com",
+            "name": "Example",
+        },
+    )
+    duplicate_response = client.post(
+        "/api/sites",
+        json={
+            "url": "https://example.com",
+            "name": "Duplicate Example",
+        },
+    )
+    list_response = client.get("/api/sites")
+
+    assert first_response.status_code == 200
+    assert duplicate_response.status_code == 409
+    assert duplicate_response.json() == {
+        "detail": "This site is already saved.",
+    }
+
+    sites = list_response.json()
+    assert len(sites) == 1
+    assert sites[0]["url"] == "example.com"
+    assert sites[0]["normalized_url"] == "https://example.com"
+
+
 def test_check_all_saved_sites_returns_empty_summary(monkeypatch, tmp_path):
     db_path = tmp_path / "sites.db"
     monkeypatch.setattr(storage, "DATABASE_PATH", db_path)

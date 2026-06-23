@@ -129,12 +129,15 @@ def create_saved_site(request: SavedSiteRequest):
         raise HTTPException(status_code=400, detail="URL must include a valid hostname.")
 
     name = request.name.strip() if request.name else None
-    return storage.create_saved_site(
-        url=request.url,
-        normalized_url=normalized_url,
-        hostname=hostname,
-        name=name or None,
-    )
+    try:
+        return storage.create_saved_site(
+            url=request.url,
+            normalized_url=normalized_url,
+            hostname=hostname,
+            name=name or None,
+        )
+    except storage.DuplicateSavedSiteError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @app.delete("/api/sites/{site_id}")

@@ -22,6 +22,7 @@ Completed so far:
 * Paginated check history with load-more support
 * Clear Check History endpoint and frontend action
 * Saved monitored sites/watchlist backend endpoints
+* Duplicate saved-site prevention using normalized URLs
 * Backend check-all endpoint for saved monitored sites
 * Basic React frontend website check form
 * React frontend recent history display
@@ -54,6 +55,8 @@ Currently implemented:
   * `POST /api/sites`
   * `POST /api/sites/check-all`
   * `DELETE /api/sites/{site_id}`
+
+* Duplicate saved-site prevention so equivalent URLs like `example.com` and `https://example.com` are only saved once
 
 * Backend endpoint for checking every saved monitored site and storing each result in history
 
@@ -100,7 +103,11 @@ Currently implemented:
 
 Planned features:
 
-* 
+* Edit saved site names
+* History filtering/search
+* Per-site detail summaries
+* Dashboard summary cards
+* Screenshots and deployment notes
 
 ## Tech Stack
 
@@ -381,6 +388,14 @@ Example response:
   "normalized_url": "https://example.com",
   "hostname": "example.com",
   "created_at": "2026-06-23T18:45:00.000000+00:00"
+}
+```
+
+If an equivalent normalized URL is already saved, the API returns HTTP `409 Conflict`:
+
+```json
+{
+  "detail": "This site is already saved."
 }
 ```
 
