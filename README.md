@@ -21,11 +21,12 @@ Completed so far:
 * `GET /api/history` endpoint
 * Basic React frontend website check form
 * React frontend recent history display
+* Polished React frontend layout for readability and responsiveness
 * Pytest coverage for URL normalization, SQLite storage, and API history behavior
 
 Next planned milestone:
 
-* UI polish, screenshots, and deployment prep
+* Add screenshots to the README
 
 ## Features
 
@@ -46,6 +47,8 @@ Currently implemented:
 * Frontend recent history table loaded from `GET /api/history?limit=10`
 
 * Refreshable saved check history after new website checks
+
+* Polished responsive frontend layout with readable status badges, result summary cards, and mobile-friendly history display
 
 * Automatic URL normalization
 

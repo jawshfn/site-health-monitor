@@ -81,12 +81,14 @@ function App() {
   return (
     <main className="app-shell">
       <section className="intro">
-        <p className="eyebrow">Site Health Monitor</p>
-        <h1>Check website availability</h1>
-        <p>
-          Enter a URL to check response status, response time, redirect target,
-          and DNS/IP information from the FastAPI backend.
-        </p>
+        <div>
+          <p className="eyebrow">Site Health Monitor</p>
+          <h1>Check website availability</h1>
+          <p>
+            Enter a URL to check response status, response time, redirect target,
+            and DNS/IP information from the FastAPI backend.
+          </p>
+        </div>
       </section>
 
       <section className="checker-panel" aria-label="Website checker">
@@ -100,11 +102,15 @@ function App() {
               onChange={(event) => setUrl(event.target.value)}
               placeholder="example.com"
               disabled={isChecking}
+              aria-describedby="url-help"
             />
             <button type="submit" disabled={isChecking}>
               {isChecking ? "Checking..." : "Check Site"}
             </button>
           </div>
+          <p id="url-help" className="field-help">
+            Try a domain like example.com or a full URL like https://example.com.
+          </p>
         </form>
 
         {isChecking && <p className="status-message">Checking website...</p>}
@@ -124,12 +130,22 @@ function App() {
 
 function ResultCard({ result }) {
   return (
-    <article className="result-card">
+    <article className={`result-card ${result.is_up ? "result-up" : "result-down"}`}>
       <div className="result-header">
-        <h2>Check Result</h2>
-        <span className={result.is_up ? "badge badge-up" : "badge badge-down"}>
-          {result.is_up ? "Up" : "Down"}
-        </span>
+        <div>
+          <p className="section-label">Latest Result</p>
+          <h2>{result.hostname ?? result.input_url ?? "Website check"}</h2>
+        </div>
+        <StatusBadge isUp={result.is_up} />
+      </div>
+
+      <div className="result-summary" aria-label="Result summary">
+        <SummaryItem label="Status" value={result.is_up ? "Reachable" : "Not reachable"} />
+        <SummaryItem label="HTTP" value={result.status_code ?? "Not available"} />
+        <SummaryItem
+          label="Response"
+          value={formatResponseTime(result.response_time_ms) ?? "Not available"}
+        />
       </div>
 
       <dl className="result-grid">
@@ -188,21 +204,41 @@ function HistoryTable({ history }) {
         <tbody>
           {history.map((check) => (
             <tr key={check.id}>
-              <td>{check.hostname ?? "Not available"}</td>
-              <td>{check.normalized_url ?? check.input_url ?? "Not available"}</td>
-              <td>
-                <span className={check.is_up ? "badge badge-up" : "badge badge-down"}>
-                  {check.is_up ? "Up" : "Down"}
-                </span>
+              <td data-label="Host">{check.hostname ?? "Not available"}</td>
+              <td data-label="URL" className="url-cell">
+                {check.normalized_url ?? check.input_url ?? "Not available"}
               </td>
-              <td>{check.status_code ?? "Not available"}</td>
-              <td>{formatResponseTime(check.response_time_ms) ?? "Not available"}</td>
-              <td>{formatDate(check.checked_at) ?? "Not available"}</td>
-              <td>{check.error ?? "None"}</td>
+              <td data-label="Status">
+                <StatusBadge isUp={check.is_up} />
+              </td>
+              <td data-label="HTTP">{check.status_code ?? "Not available"}</td>
+              <td data-label="Time">{formatResponseTime(check.response_time_ms) ?? "Not available"}</td>
+              <td data-label="Checked">{formatDate(check.checked_at) ?? "Not available"}</td>
+              <td data-label="Error" className="error-cell">
+                {check.error ?? "None"}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function StatusBadge({ isUp }) {
+  return (
+    <span className={isUp ? "badge badge-up" : "badge badge-down"}>
+      <span aria-hidden="true">{isUp ? "OK" : "!"}</span>
+      {isUp ? "Up" : "Down"}
+    </span>
+  );
+}
+
+function SummaryItem({ label, value }) {
+  return (
+    <div className="summary-item">
+      <span>{label}</span>
+      <strong>{value}</strong>
     </div>
   );
 }
