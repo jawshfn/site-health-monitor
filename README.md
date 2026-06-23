@@ -88,7 +88,7 @@ http://127.0.0.1:5173
 From the `backend/` folder:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest
+python -m pytest
 ```
 
 Build the frontend:
@@ -97,6 +97,8 @@ Build the frontend:
 cd frontend
 npm run build
 ```
+
+GitHub Actions runs the backend test suite with Python 3.12 and the frontend production build with Node 20 on push and pull request.
 
 ## API Overview
 
@@ -173,7 +175,6 @@ Planned improvements:
 * Per-site detail summaries
 * Response time trends
 * Screenshots and deployment notes
-* GitHub Actions test/build workflow
 
 ## Development Notes
 
