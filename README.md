@@ -1,27 +1,36 @@
 # Site Health Monitor
 
-Site Health Monitor is a full-stack web app for checking website availability from a local HTTP checker, including response time, redirects, observed result type, reachability diagnostics, and DNS/IP information. Users can run one-time checks, save monitored sites, check all saved sites at once, and review saved check history through a React dashboard backed by a FastAPI API and SQLite storage.
+[![CI](https://github.com/jawshfn/site-health-monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/jawshfn/site-health-monitor/actions/workflows/ci.yml)
+
+Site Health Monitor is a full-stack monitoring dashboard for checking what a local HTTP checker observes when it reaches a website. It reports response time, redirects, DNS/IP information, saved check history, watchlist checks, observed status labels, and multi-stage diagnostics for DNS, TCP connection, and HTTP response behavior.
+
+The app is designed as a portfolio project: practical enough to use locally, small enough to understand quickly, and tested through a GitHub Actions CI workflow.
 
 ## Screenshots
 
-Screenshots coming soon.
+### Latest result diagnostics
+
+![Latest result diagnostics](assets/screenshots/latest-result-diagnostics.png)
+
+### Check all saved sites
+
+![Check all saved sites](assets/screenshots/check-all-saved-sites.png)
+
+### History filtering and search
+
+![History filtering and search](assets/screenshots/history-filtering-search.png)
 
 ## Features
 
-* Check website availability, HTTP status, response time, redirects, and DNS/IP information
+* Check a website's observed availability, HTTP status, response time, redirects, and DNS/IP information
+* Show multi-stage reachability diagnostics for DNS, TCP connection, and HTTP response stages
 * Classify observed results as healthy, HTTP error, timeout, DNS failure, connection failure, invalid URL, or unknown error
-* Explain multi-stage reachability diagnostics for DNS, TCP connection, and HTTP response stages
+* Save monitored sites in a SQLite-backed watchlist with duplicate prevention and editable friendly names
+* Check one saved site or check all saved sites at once
 * View dashboard summary cards for saved sites, total checks, latest healthy/issues counts, and average response time
-* Automatically normalize URLs, such as converting `example.com` to `https://example.com`
-* Save monitored sites in a local watchlist
-* Prevent duplicate saved sites using normalized URLs
-* Edit saved-site friendly names
-* Check individual saved sites or check all saved sites at once
-* Store check history in SQLite
-* Browse older history with Load More pagination, observed-status filters, and hostname/URL search
-* Clear check history without deleting saved monitored sites
-* Responsive React frontend with observed-result badges, result cards, and mobile-friendly history display
-* Backend tests for URL normalization, storage behavior, API endpoints, saved sites, history pagination, and check-all behavior
+* Store check history locally with pagination, status filters, hostname/URL search, and clear-history support
+* Use a responsive React frontend with readable result cards, status badges, saved-site controls, and history layout
+* Run backend tests and frontend builds automatically with GitHub Actions CI
 
 ## Tech Stack
 
@@ -41,7 +50,13 @@ Screenshots coming soon.
 * JavaScript
 * CSS
 
-## Quick Start
+**Tooling**
+
+* GitHub Actions
+* Python 3.12 in CI
+* Node 20 in CI
+
+## Run Locally
 
 ### Backend
 
@@ -83,37 +98,39 @@ The frontend runs at the URL shown by Vite, usually:
 http://127.0.0.1:5173
 ```
 
-## Running Tests
+The backend must be running for website checks, saved sites, history, and dashboard summary data to load.
 
-From the `backend/` folder:
+## Testing and CI
+
+Run the backend tests from the `backend/` folder:
 
 ```powershell
 python -m pytest
 ```
 
-Build the frontend:
+Build the frontend from the `frontend/` folder:
 
 ```powershell
-cd frontend
 npm run build
 ```
 
-GitHub Actions runs the backend test suite with Python 3.12 and the frontend production build with Node 20 on push and pull request.
+GitHub Actions runs the backend test suite with Python 3.12 and the frontend production build with Node 20 on every push and pull request.
 
 ## API Overview
 
-| Method   | Endpoint                         | Description                                      |
-| -------- | -------------------------------- | ------------------------------------------------ |
-| `GET`    | `/api/health`                    | Check whether the backend is running             |
-| `GET`    | `/api/summary`                   | View dashboard totals from local SQLite data     |
-| `POST`   | `/api/check`                     | Check one website and save the result to history |
-| `GET`    | `/api/history?limit=10&offset=0` | View paginated and filterable check history      |
-| `DELETE` | `/api/history`                   | Clear saved check history                        |
-| `GET`    | `/api/sites`                     | List saved monitored sites                       |
-| `POST`   | `/api/sites`                     | Save a monitored site                            |
-| `PATCH`  | `/api/sites/{site_id}`           | Edit a saved site’s friendly name                |
-| `DELETE` | `/api/sites/{site_id}`           | Delete a saved monitored site                    |
-| `POST`   | `/api/sites/check-all`           | Check every saved monitored site                 |
+| Method   | Endpoint                                               | Description                                      |
+| -------- | ------------------------------------------------------ | ------------------------------------------------ |
+| `GET`    | `/api/health`                                          | Check whether the backend is running             |
+| `GET`    | `/api/summary`                                         | View dashboard totals from local SQLite data     |
+| `POST`   | `/api/check`                                           | Check one website and save the result to history |
+| `GET`    | `/api/history?limit=10&offset=0`                       | View paginated and filterable check history      |
+| `GET`    | `/api/history?status_label=timeout&search=example`     | Filter history by observed status and search     |
+| `DELETE` | `/api/history`                                         | Clear saved check history                        |
+| `GET`    | `/api/sites`                                           | List saved monitored sites                       |
+| `POST`   | `/api/sites`                                           | Save a monitored site                            |
+| `PATCH`  | `/api/sites/{site_id}`                                 | Edit a saved site's friendly name                |
+| `DELETE` | `/api/sites/{site_id}`                                 | Delete a saved monitored site                    |
+| `POST`   | `/api/sites/check-all`                                 | Check every saved monitored site                 |
 
 Example website check request:
 
@@ -147,14 +164,13 @@ Example website check response:
 }
 ```
 
-Example filtered history request:
+History supports `limit`, `offset`, `status_label`, and `search`. Use `status_label=issue` to return all non-healthy observed results. Search terms shorter than 2 characters are ignored.
 
-```text
-GET /api/history?limit=10&offset=0&status_label=timeout&search=example
-```
+## Notes About Observed Results
 
-Use `status_label=issue` to return all non-healthy observed results.
-Search terms shorter than 2 characters are ignored.
+Site Health Monitor reports what this local checker observed. It does not prove that a website is globally down.
+
+Some sites may block automated requests, use CDN or bot protection, respond differently by region, or time out from this checker while still loading normally in a browser. The diagnostic fields are meant to explain which stages succeeded or failed: DNS lookup, TCP connection, and HTTP response.
 
 ## Local Data
 
@@ -174,8 +190,4 @@ Planned improvements:
 
 * Per-site detail summaries
 * Response time trends
-* Screenshots and deployment notes
-
-## Development Notes
-
-This project is being built in small, focused milestones. Each milestone adds one clear piece of functionality and updates tests and documentation where practical.
+* Deployment notes

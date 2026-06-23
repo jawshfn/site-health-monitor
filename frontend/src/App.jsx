@@ -978,32 +978,40 @@ function HistoryTable({ history }) {
       <table className="history-table">
         <thead>
           <tr>
-            <th scope="col">Host</th>
-            <th scope="col">URL</th>
+            <th scope="col">Site</th>
             <th scope="col">Status</th>
             <th scope="col">HTTP</th>
-            <th scope="col">Time</th>
+            <th scope="col">Response</th>
             <th scope="col">Checked</th>
-            <th scope="col">Details</th>
           </tr>
         </thead>
         <tbody>
           {history.map((check) => (
-            <tr key={check.id}>
-              <td data-label="Host">{check.hostname ?? "Not available"}</td>
-              <td data-label="URL" className="url-cell">
-                {check.normalized_url ?? check.input_url ?? "Not available"}
-              </td>
-              <td data-label="Status">
-                <StatusBadge result={check} />
-              </td>
-              <td data-label="HTTP">{formatHttpStatus(check)}</td>
-              <td data-label="Time">{formatResponseTime(check.response_time_ms) ?? "Not available"}</td>
-              <td data-label="Checked">{formatDate(check.checked_at) ?? "Not available"}</td>
-              <td data-label="Details" className="error-cell">
-                {check.diagnostic_summary ?? check.error ?? "None"}
-              </td>
-            </tr>
+            <React.Fragment key={check.id}>
+              <tr className="history-main-row">
+                <td data-label="Site" className="site-cell">
+                  <strong>{check.hostname ?? "Not available"}</strong>
+                  <span>{check.normalized_url ?? check.input_url ?? "Not available"}</span>
+                </td>
+                <td data-label="Status" className="status-cell">
+                  <StatusBadge result={check} />
+                </td>
+                <td data-label="HTTP" className="http-cell">
+                  {formatHttpStatus(check)}
+                </td>
+                <td data-label="Response" className="time-cell">
+                  {formatResponseTime(check.response_time_ms) ?? "Not available"}
+                </td>
+                <td data-label="Checked" className="checked-cell">
+                  {formatDate(check.checked_at) ?? "Not available"}
+                </td>
+              </tr>
+              <tr className="history-details-row">
+                <td colSpan="5">
+                  <span>Details:</span> {check.diagnostic_summary ?? check.error ?? "None"}
+                </td>
+              </tr>
+            </React.Fragment>
           ))}
         </tbody>
       </table>
