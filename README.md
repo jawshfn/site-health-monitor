@@ -1,119 +1,28 @@
 # Site Health Monitor
 
-Site Health Monitor is a full-stack portfolio project for checking website availability, response time, and basic DNS/IP information.
+Site Health Monitor is a full-stack web app for checking website availability, response time, redirects, and DNS/IP information. Users can run one-time checks, save monitored sites, check all saved sites at once, and review saved check history through a React dashboard backed by a FastAPI API and SQLite storage.
 
-The project is being built incrementally to demonstrate backend API development, database persistence, testing, frontend integration, and technical troubleshooting.
+## Screenshots
 
-## Project Status
-
-In active development.
-
-Completed so far:
-
-* FastAPI backend scaffold
-* Health check endpoint
-* Website check endpoint
-* URL normalization
-* DNS/IP lookup
-* HTTP status checking
-* Response time measurement
-* SQLite-backed check history
-* `GET /api/history` endpoint
-* Paginated check history with load-more support
-* Clear Check History endpoint and frontend action
-* Saved monitored sites/watchlist backend endpoints
-* Duplicate saved-site prevention using normalized URLs
-* Edit saved-site friendly names
-* Backend check-all endpoint for saved monitored sites
-* Basic React frontend website check form
-* React frontend recent history display
-* Polished React frontend layout for readability and responsiveness
-* React frontend saved-sites/watchlist UI
-* React frontend edit saved-site name action
-* Frontend Check All Saved Sites button and dashboard summary
-* Pytest coverage for URL normalization, SQLite storage, and API history behavior
-
-Next planned milestone:
-
-* Add screenshots to the README
+Screenshots coming soon.
 
 ## Features
 
-Currently implemented:
-
-* `GET /api/health` endpoint for backend health checks
-
-* `POST /api/check` endpoint for checking a website
-
-* `GET /api/history` endpoint for viewing recent saved checks
-
-* Paginated history using `GET /api/history?limit=10&offset=0`
-
-* `DELETE /api/history` endpoint for clearing saved check history without deleting saved monitored sites
-
-* Saved monitored sites API
-
-  * `GET /api/sites`
-  * `POST /api/sites`
-  * `PATCH /api/sites/{site_id}`
-  * `POST /api/sites/check-all`
-  * `DELETE /api/sites/{site_id}`
-
-* Duplicate saved-site prevention so equivalent URLs like `example.com` and `https://example.com` are only saved once
-
-* Backend endpoint for checking every saved monitored site and storing each result in history
-
-* React frontend form for submitting website checks
-
-* React frontend saved-sites/watchlist UI for creating, viewing, editing names, checking, refreshing, and deleting monitored sites
-
-* Frontend Check All Saved Sites button with total/up/down summary and per-site results
-
-* Frontend result card for availability, response time, DNS/IP details, redirect target, timestamp, and errors
-
-* Frontend recent history table loaded from `GET /api/history?limit=10&offset=0`
-
-* Frontend Load More button for viewing older saved check history
-
-* Frontend Clear History action with confirmation
-
-* Refreshable saved check history after new website checks
-
-* Polished responsive frontend layout with readable status badges, result summary cards, and mobile-friendly history display
-
-* Automatic URL normalization
-
-  * `example.com` becomes `https://example.com`
-  * `http://example.com` remains unchanged
-
-* DNS/IP resolution using Python's `socket` module
-
-* HTTP request checking using `httpx`
-
-* Response time measurement in milliseconds
-
-* Final URL tracking after redirects
-
-* SQLite storage for check history
-
-* Structured JSON responses
-
-* Network-free tests for URL normalization
-
-* Temporary database tests for SQLite storage
-
-* API endpoint tests with mocked website checks
-
-Planned features:
-
-* History filtering/search
-* Per-site detail summaries
-* Dashboard summary cards
-* Screenshots and deployment notes
+* Check website availability, HTTP status, response time, redirects, and DNS/IP information
+* Automatically normalize URLs, such as converting `example.com` to `https://example.com`
+* Save monitored sites in a local watchlist
+* Prevent duplicate saved sites using normalized URLs
+* Edit saved-site friendly names
+* Check individual saved sites or check all saved sites at once
+* Store check history in SQLite
+* Browse older history with Load More pagination
+* Clear check history without deleting saved monitored sites
+* Responsive React frontend with status badges, result cards, and mobile-friendly history display
+* Backend tests for URL normalization, storage behavior, API endpoints, saved sites, history pagination, and check-all behavior
 
 ## Tech Stack
 
-Backend:
+**Backend**
 
 * Python
 * FastAPI
@@ -122,42 +31,28 @@ Backend:
 * SQLite
 * pytest
 
-Frontend:
+**Frontend**
 
 * React
 * Vite
 * JavaScript
 * CSS
 
-Development tools:
+## Quick Start
 
-* Git
-* GitHub
-* VS Code
-
-## Backend Setup
+### Backend
 
 From the project root:
 
 ```powershell
 cd backend
 python -m venv .venv
-```
-
-Install dependencies:
-
-```powershell
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-```
-
-Run the backend:
-
-```powershell
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 
-The backend will run at:
+The backend runs at:
 
 ```text
 http://127.0.0.1:8000
@@ -169,58 +64,20 @@ FastAPI docs are available at:
 http://127.0.0.1:8000/docs
 ```
 
-## Frontend Setup
+### Frontend
 
-From the project root:
+Open a second terminal from the project root:
 
 ```powershell
 cd frontend
 npm install
-```
-
-Run the frontend dev server:
-
-```powershell
 npm run dev
 ```
 
-The frontend will run at the URL shown by Vite, usually one of:
+The frontend runs at the URL shown by Vite, usually:
 
 ```text
 http://127.0.0.1:5173
-http://localhost:5173
-```
-
-The backend must also be running at:
-
-```text
-http://127.0.0.1:8000
-```
-
-The website check form sends requests to:
-
-```text
-POST http://127.0.0.1:8000/api/check
-```
-
-The recent history table loads saved checks from:
-
-```text
-GET http://127.0.0.1:8000/api/history?limit=10&offset=0
-```
-
-The saved-sites/watchlist section loads monitored sites from:
-
-```text
-GET http://127.0.0.1:8000/api/sites
-```
-
-From the frontend, users can save monitored sites, edit friendly names, delete saved sites, run a check for an individual saved site, and check all saved sites at once.
-
-Build the frontend:
-
-```powershell
-npm run build
 ```
 
 ## Running Tests
@@ -231,29 +88,28 @@ From the `backend/` folder:
 .\.venv\Scripts\python.exe -m pytest
 ```
 
-## API Examples
+Build the frontend:
 
-### Health check
-
-```text
-GET /api/health
+```powershell
+cd frontend
+npm run build
 ```
 
-Example response:
+## API Overview
 
-```json
-{
-  "status": "ok"
-}
-```
+| Method   | Endpoint                         | Description                                      |
+| -------- | -------------------------------- | ------------------------------------------------ |
+| `GET`    | `/api/health`                    | Check whether the backend is running             |
+| `POST`   | `/api/check`                     | Check one website and save the result to history |
+| `GET`    | `/api/history?limit=10&offset=0` | View paginated check history                     |
+| `DELETE` | `/api/history`                   | Clear saved check history                        |
+| `GET`    | `/api/sites`                     | List saved monitored sites                       |
+| `POST`   | `/api/sites`                     | Save a monitored site                            |
+| `PATCH`  | `/api/sites/{site_id}`           | Edit a saved site’s friendly name                |
+| `DELETE` | `/api/sites/{site_id}`           | Delete a saved monitored site                    |
+| `POST`   | `/api/sites/check-all`           | Check every saved monitored site                 |
 
-### Website check
-
-```text
-POST /api/check
-```
-
-Example request:
+Example website check request:
 
 ```json
 {
@@ -261,7 +117,7 @@ Example request:
 }
 ```
 
-Example response:
+Example website check response:
 
 ```json
 {
@@ -278,223 +134,9 @@ Example response:
 }
 ```
 
-### Check history
-
-```text
-GET /api/history
-```
-
-Example response:
-
-```json
-{
-  "items": [
-    {
-      "id": 2,
-      "input_url": "https://github.com",
-      "normalized_url": "https://github.com",
-      "final_url": "https://github.com",
-      "hostname": "github.com",
-      "is_up": true,
-      "status_code": 200,
-      "response_time_ms": 428,
-      "ip_addresses": ["140.82.112.3"],
-      "error": null,
-      "checked_at": "2026-06-23T17:35:08.709483+00:00"
-    },
-    {
-      "id": 1,
-      "input_url": "https://example.com",
-      "normalized_url": "https://example.com",
-      "final_url": "https://example.com",
-      "hostname": "example.com",
-      "is_up": true,
-      "status_code": 200,
-      "response_time_ms": 399,
-      "ip_addresses": ["104.20.23.154", "172.66.147.243"],
-      "error": null,
-      "checked_at": "2026-06-23T17:34:17.589642+00:00"
-    }
-  ],
-  "total": 37,
-  "limit": 10,
-  "offset": 0,
-  "has_more": true
-}
-```
-
-Limit and page through history results:
-
-```text
-GET /api/history?limit=10&offset=10
-```
-
-Clear saved check history:
-
-```text
-DELETE /api/history
-```
-
-Example response:
-
-```json
-{
-  "deleted": true,
-  "deleted_count": 10
-}
-```
-
-This only clears website check history. Saved monitored sites are not deleted.
-
-### Saved monitored sites
-
-```text
-GET /api/sites
-```
-
-Example response:
-
-```json
-[
-  {
-    "id": 1,
-    "name": "Example",
-    "url": "example.com",
-    "normalized_url": "https://example.com",
-    "hostname": "example.com",
-    "created_at": "2026-06-23T18:45:00.000000+00:00"
-  }
-]
-```
-
-```text
-POST /api/sites
-```
-
-Example request:
-
-```json
-{
-  "name": "Example",
-  "url": "example.com"
-}
-```
-
-Example response:
-
-```json
-{
-  "id": 1,
-  "name": "Example",
-  "url": "example.com",
-  "normalized_url": "https://example.com",
-  "hostname": "example.com",
-  "created_at": "2026-06-23T18:45:00.000000+00:00"
-}
-```
-
-If an equivalent normalized URL is already saved, the API returns HTTP `409 Conflict`:
-
-```json
-{
-  "detail": "This site is already saved."
-}
-```
-
-```text
-PATCH /api/sites/1
-```
-
-Example request:
-
-```json
-{
-  "name": "Docs Site"
-}
-```
-
-Example response:
-
-```json
-{
-  "id": 1,
-  "name": "Docs Site",
-  "url": "example.com",
-  "normalized_url": "https://example.com",
-  "hostname": "example.com",
-  "created_at": "2026-06-23T18:45:00.000000+00:00"
-}
-```
-
-Sending an empty or whitespace-only name clears the friendly name and stores it as `null`.
-
-```text
-DELETE /api/sites/1
-```
-
-Example response:
-
-```json
-{
-  "deleted": true,
-  "site": {
-    "id": 1,
-    "name": "Example",
-    "url": "example.com",
-    "normalized_url": "https://example.com",
-    "hostname": "example.com",
-    "created_at": "2026-06-23T18:45:00.000000+00:00"
-  }
-}
-```
-
-```text
-POST /api/sites/check-all
-```
-
-Checks every saved monitored site, stores each result in check history, and returns a summary.
-
-Example response:
-
-```json
-{
-  "total": 2,
-  "up": 1,
-  "down": 1,
-  "results": [
-    {
-      "site_id": 1,
-      "name": "Example",
-      "url": "example.com",
-      "normalized_url": "https://example.com",
-      "hostname": "example.com",
-      "is_up": true,
-      "status_code": 200,
-      "response_time_ms": 123,
-      "error": null,
-      "checked_at": "2026-06-23T18:45:00.000000+00:00"
-    },
-    {
-      "site_id": 2,
-      "name": "Offline Example",
-      "url": "offline.example",
-      "normalized_url": "https://offline.example",
-      "hostname": "offline.example",
-      "is_up": false,
-      "status_code": null,
-      "response_time_ms": null,
-      "error": "[Errno 11001] getaddrinfo failed",
-      "checked_at": "2026-06-23T18:45:01.000000+00:00"
-    }
-  ]
-}
-```
-
 ## Local Data
 
-Website check history is stored locally in a SQLite database.
-
-SQLite database files are intentionally ignored by git so local check history is not committed to the repository.
+Website check history and saved monitored sites are stored locally in SQLite. Database files are intentionally ignored by git so local runtime data is not committed.
 
 Ignored database file types include:
 
@@ -504,26 +146,17 @@ Ignored database file types include:
 *.sqlite3
 ```
 
+## Roadmap
+
+Planned improvements:
+
+* Dashboard summary cards
+* History filtering and search
+* Per-site detail summaries
+* Response time trends
+* Screenshots and deployment notes
+* GitHub Actions test/build workflow
+
 ## Development Notes
 
-This project is being built in small, focused commits. Each milestone adds one clear piece of functionality before moving to the next.
-
-Milestone order:
-
-1. Backend scaffold
-2. Website check endpoint
-3. SQLite history storage
-4. React frontend website check form
-5. Frontend history display
-6. UI polish
-7. Backend saved-sites/watchlist API
-8. Frontend saved-sites/watchlist UI
-9. Backend check-all saved sites API
-10. Frontend Check All Saved Sites button and dashboard summary
-11. Clear Check History
-12. Load More Check History
-13. Prevent duplicate saved sites
-14. Edit saved site names
-
-xx. Screenshots
-xx. Deployment documentation
+This project is being built in small, focused milestones. Each milestone adds one clear piece of functionality and updates tests and documentation where practical.
