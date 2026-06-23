@@ -20,6 +20,9 @@ function App() {
   const [isSavingSite, setIsSavingSite] = useState(false);
   const [checkingSiteId, setCheckingSiteId] = useState(null);
   const [deletingSiteId, setDeletingSiteId] = useState(null);
+  const [editingSiteId, setEditingSiteId] = useState(null);
+  const [editingSiteName, setEditingSiteName] = useState("");
+  const [savingSiteNameId, setSavingSiteNameId] = useState(null);
   const [isCheckingAllSites, setIsCheckingAllSites] = useState(false);
   const [checkAllResult, setCheckAllResult] = useState(null);
   const [checkAllMessage, setCheckAllMessage] = useState("");
@@ -37,6 +40,11 @@ function App() {
     loadHistory();
     loadSavedSites();
   }, []);
+
+  function clearCheckAllResults() {
+    setCheckAllResult(null);
+    setCheckAllMessage("");
+  }
 
   async function loadHistory({ offset = 0, append = false } = {}) {
     if (append) {
@@ -122,6 +130,9 @@ function App() {
 
       const data = await response.json();
       setSavedSites(data);
+      setEditingSiteId(null);
+      setEditingSiteName("");
+      clearCheckAllResults();
     } catch (error) {
       setSitesMessage(
         "Could not load saved sites. Make sure the backend is running at http://127.0.0.1:8000."
@@ -208,12 +219,63 @@ function App() {
       }
 
       setSavedSites((currentSites) => currentSites.filter((site) => site.id !== siteId));
+      clearCheckAllResults();
     } catch (error) {
       setSitesMessage(
         "Could not delete the saved site. Make sure the backend is running at http://127.0.0.1:8000."
       );
     } finally {
       setDeletingSiteId(null);
+    }
+  }
+
+  function startEditingSite(site) {
+    setEditingSiteId(site.id);
+    setEditingSiteName(site.name ?? "");
+    setSitesMessage("");
+  }
+
+  function cancelEditingSite() {
+    setEditingSiteId(null);
+    setEditingSiteName("");
+    setSitesMessage("");
+  }
+
+  async function updateSavedSiteName(siteId) {
+    setSavingSiteNameId(siteId);
+    setSitesMessage("");
+
+    try {
+      const response = await fetch(`${SITES_API_URL}/${siteId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: editingSiteName,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.detail ?? `Update failed with status ${response.status}.`);
+      }
+
+      const updatedSite = await response.json();
+      setSavedSites((currentSites) =>
+        currentSites.map((site) => (site.id === updatedSite.id ? updatedSite : site))
+      );
+      setEditingSiteId(null);
+      setEditingSiteName("");
+      clearCheckAllResults();
+    } catch (error) {
+      setSitesMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not update the saved site. Make sure the backend is running."
+      );
+    } finally {
+      setSavingSiteNameId(null);
     }
   }
 
@@ -343,6 +405,9 @@ function App() {
         isSaving={isSavingSite}
         checkingSiteId={checkingSiteId}
         deletingSiteId={deletingSiteId}
+        editingSiteId={editingSiteId}
+        editingSiteName={editingSiteName}
+        savingSiteNameId={savingSiteNameId}
         isCheckingAll={isCheckingAllSites}
         checkAllResult={checkAllResult}
         checkAllMessage={checkAllMessage}
@@ -354,6 +419,10 @@ function App() {
         onCheck={checkSavedSite}
         onCheckAll={checkAllSavedSites}
         onDelete={deleteSavedSite}
+        onStartEdit={startEditingSite}
+        onEditNameChange={setEditingSiteName}
+        onSaveEdit={updateSavedSiteName}
+        onCancelEdit={cancelEditingSite}
       />
 
       <HistorySection
@@ -381,6 +450,9 @@ function SavedSitesSection({
   isSaving,
   checkingSiteId,
   deletingSiteId,
+  editingSiteId,
+  editingSiteName,
+  savingSiteNameId,
   isCheckingAll,
   checkAllResult,
   checkAllMessage,
@@ -392,6 +464,10 @@ function SavedSitesSection({
   onCheck,
   onCheckAll,
   onDelete,
+  onStartEdit,
+  onEditNameChange,
+  onSaveEdit,
+  onCancelEdit,
 }) {
   return (
     <section className="sites-panel" aria-label="Saved monitored sites">
@@ -460,8 +536,15 @@ function SavedSitesSection({
                 site={site}
                 isChecking={checkingSiteId === site.id}
                 isDeleting={deletingSiteId === site.id}
+                isEditing={editingSiteId === site.id}
+                editName={editingSiteName}
+                isSavingName={savingSiteNameId === site.id}
                 onCheck={onCheck}
                 onDelete={onDelete}
+                onStartEdit={onStartEdit}
+                onEditNameChange={onEditNameChange}
+                onSaveEdit={onSaveEdit}
+                onCancelEdit={onCancelEdit}
               />
             ))}
           </div>
@@ -511,11 +594,56 @@ function CheckAllSummary({ summary }) {
   );
 }
 
-function SavedSiteCard({ site, isChecking, isDeleting, onCheck, onDelete }) {
+function SavedSiteCard({
+  site,
+  isChecking,
+  isDeleting,
+  isEditing,
+  editName,
+  isSavingName,
+  onCheck,
+  onDelete,
+  onStartEdit,
+  onEditNameChange,
+  onSaveEdit,
+  onCancelEdit,
+}) {
+  function handleEditSubmit(event) {
+    event.preventDefault();
+    onSaveEdit(site.id);
+  }
+
   return (
     <article className="site-card">
       <div className="site-card-main">
-        <h3>{site.name || site.hostname}</h3>
+        {isEditing ? (
+          <form className="site-edit-form" onSubmit={handleEditSubmit}>
+            <label htmlFor={`site-name-${site.id}`}>Friendly name</label>
+            <input
+              id={`site-name-${site.id}`}
+              type="text"
+              value={editName}
+              onChange={(event) => onEditNameChange(event.target.value)}
+              placeholder="Optional display name"
+              disabled={isSavingName}
+            />
+            <div className="site-edit-actions">
+              <button type="submit" disabled={isSavingName || isChecking || isDeleting}>
+                {isSavingName ? "Saving..." : "Save"}
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={onCancelEdit}
+                disabled={isSavingName}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        ) : (
+          <h3>{site.name || site.hostname}</h3>
+        )}
         <p className="site-url">{site.normalized_url}</p>
         <dl className="site-meta">
           <div>
@@ -529,14 +657,26 @@ function SavedSiteCard({ site, isChecking, isDeleting, onCheck, onDelete }) {
         </dl>
       </div>
       <div className="site-actions">
-        <button type="button" onClick={() => onCheck(site)} disabled={isChecking || isDeleting}>
+        <button
+          type="button"
+          onClick={() => onCheck(site)}
+          disabled={isChecking || isDeleting || isEditing}
+        >
           {isChecking ? "Checking..." : "Check Site"}
+        </button>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => onStartEdit(site)}
+          disabled={isChecking || isDeleting || isEditing}
+        >
+          Edit Name
         </button>
         <button
           type="button"
           className="danger-button"
           onClick={() => onDelete(site.id)}
-          disabled={isChecking || isDeleting}
+          disabled={isChecking || isDeleting || isEditing}
         >
           {isDeleting ? "Deleting..." : "Delete"}
         </button>

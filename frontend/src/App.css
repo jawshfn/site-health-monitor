@@ -318,6 +318,22 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.site-edit-form {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.site-edit-form label {
+  color: #111827;
+  font-weight: 800;
+}
+
+.site-edit-actions {
+  display: flex;
+  gap: 10px;
+}
+
 .site-url {
   color: #1f6f78;
   font-weight: 800;
@@ -566,6 +582,10 @@ dd {
   }
 
   .site-actions {
+    flex-direction: column;
+  }
+
+  .site-edit-actions {
     flex-direction: column;
   }
 

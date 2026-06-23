@@ -216,6 +216,35 @@ def test_get_saved_site_by_normalized_url(tmp_path):
     assert missing_site is None
 
 
+def test_update_saved_site_name(tmp_path):
+    db_path = tmp_path / "sites.db"
+    site = storage.create_saved_site(
+        url="example.com",
+        normalized_url="https://example.com",
+        hostname="example.com",
+        name="Example",
+        db_path=db_path,
+    )
+
+    updated_site = storage.update_saved_site_name(site["id"], "Docs Site", db_path)
+
+    assert updated_site is not None
+    assert updated_site["id"] == site["id"]
+    assert updated_site["name"] == "Docs Site"
+    assert updated_site["url"] == "example.com"
+    assert updated_site["normalized_url"] == "https://example.com"
+    assert updated_site["hostname"] == "example.com"
+    assert updated_site["created_at"] == site["created_at"]
+
+
+def test_update_saved_site_name_returns_none_for_missing_site(tmp_path):
+    db_path = tmp_path / "sites.db"
+
+    updated_site = storage.update_saved_site_name(999, "Missing", db_path)
+
+    assert updated_site is None
+
+
 def test_delete_saved_site(tmp_path):
     db_path = tmp_path / "sites.db"
     site = storage.create_saved_site(

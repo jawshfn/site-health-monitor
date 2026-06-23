@@ -23,11 +23,13 @@ Completed so far:
 * Clear Check History endpoint and frontend action
 * Saved monitored sites/watchlist backend endpoints
 * Duplicate saved-site prevention using normalized URLs
+* Edit saved-site friendly names
 * Backend check-all endpoint for saved monitored sites
 * Basic React frontend website check form
 * React frontend recent history display
 * Polished React frontend layout for readability and responsiveness
 * React frontend saved-sites/watchlist UI
+* React frontend edit saved-site name action
 * Frontend Check All Saved Sites button and dashboard summary
 * Pytest coverage for URL normalization, SQLite storage, and API history behavior
 
@@ -53,6 +55,7 @@ Currently implemented:
 
   * `GET /api/sites`
   * `POST /api/sites`
+  * `PATCH /api/sites/{site_id}`
   * `POST /api/sites/check-all`
   * `DELETE /api/sites/{site_id}`
 
@@ -62,7 +65,7 @@ Currently implemented:
 
 * React frontend form for submitting website checks
 
-* React frontend saved-sites/watchlist UI for creating, checking, refreshing, and deleting monitored sites
+* React frontend saved-sites/watchlist UI for creating, viewing, editing names, checking, refreshing, and deleting monitored sites
 
 * Frontend Check All Saved Sites button with total/up/down summary and per-site results
 
@@ -103,7 +106,6 @@ Currently implemented:
 
 Planned features:
 
-* Edit saved site names
 * History filtering/search
 * Per-site detail summaries
 * Dashboard summary cards
@@ -213,7 +215,7 @@ The saved-sites/watchlist section loads monitored sites from:
 GET http://127.0.0.1:8000/api/sites
 ```
 
-From the frontend, users can save monitored sites, delete saved sites, run a check for an individual saved site, and check all saved sites at once.
+From the frontend, users can save monitored sites, edit friendly names, delete saved sites, run a check for an individual saved site, and check all saved sites at once.
 
 Build the frontend:
 
@@ -400,6 +402,33 @@ If an equivalent normalized URL is already saved, the API returns HTTP `409 Conf
 ```
 
 ```text
+PATCH /api/sites/1
+```
+
+Example request:
+
+```json
+{
+  "name": "Docs Site"
+}
+```
+
+Example response:
+
+```json
+{
+  "id": 1,
+  "name": "Docs Site",
+  "url": "example.com",
+  "normalized_url": "https://example.com",
+  "hostname": "example.com",
+  "created_at": "2026-06-23T18:45:00.000000+00:00"
+}
+```
+
+Sending an empty or whitespace-only name clears the friendly name and stores it as `null`.
+
+```text
 DELETE /api/sites/1
 ```
 
@@ -493,6 +522,8 @@ Milestone order:
 10. Frontend Check All Saved Sites button and dashboard summary
 11. Clear Check History
 12. Load More Check History
+13. Prevent duplicate saved sites
+14. Edit saved site names
 
 xx. Screenshots
 xx. Deployment documentation

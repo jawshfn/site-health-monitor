@@ -16,6 +16,10 @@ class SavedSiteRequest(BaseModel):
     name: str | None = None
 
 
+class SavedSiteNameUpdateRequest(BaseModel):
+    name: str | None = None
+
+
 app = FastAPI(
     title="Site Health Monitor API",
     description="Backend API for checking website availability and response time.",
@@ -151,6 +155,17 @@ def delete_saved_site(site_id: int):
         "deleted": True,
         "site": deleted_site,
     }
+
+
+@app.patch("/api/sites/{site_id}")
+def update_saved_site_name(site_id: int, request: SavedSiteNameUpdateRequest):
+    name = request.name.strip() if request.name else None
+    updated_site = storage.update_saved_site_name(site_id, name or None)
+
+    if updated_site is None:
+        raise HTTPException(status_code=404, detail="Saved site not found.")
+
+    return updated_site
 
 
 def _check_and_save(url: str):

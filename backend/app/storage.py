@@ -233,6 +233,52 @@ def get_saved_sites(db_path: Path | str | None = None) -> list[dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
+def update_saved_site_name(
+    site_id: int,
+    name: str | None,
+    db_path: Path | str | None = None,
+) -> dict[str, Any] | None:
+    initialize_database(db_path)
+    path = _get_database_path(db_path)
+
+    with sqlite3.connect(path) as connection:
+        connection.row_factory = sqlite3.Row
+        existing_row = connection.execute(
+            """
+            SELECT id, name, url, normalized_url, hostname, created_at
+            FROM saved_sites
+            WHERE id = ?
+            """,
+            (site_id,),
+        ).fetchone()
+
+        if existing_row is None:
+            return None
+
+        connection.execute(
+            """
+            UPDATE saved_sites
+            SET name = ?
+            WHERE id = ?
+            """,
+            (name, site_id),
+        )
+
+        updated_row = connection.execute(
+            """
+            SELECT id, name, url, normalized_url, hostname, created_at
+            FROM saved_sites
+            WHERE id = ?
+            """,
+            (site_id,),
+        ).fetchone()
+
+        if updated_row is None:
+            raise RuntimeError("Failed to update saved site.")
+
+    return dict(updated_row)
+
+
 def delete_saved_site(
     site_id: int,
     db_path: Path | str | None = None,

@@ -151,6 +151,69 @@ def test_saved_sites_endpoint_rejects_duplicate_normalized_url(monkeypatch, tmp_
     assert sites[0]["normalized_url"] == "https://example.com"
 
 
+def test_saved_sites_endpoint_updates_name(monkeypatch, tmp_path):
+    db_path = tmp_path / "sites.db"
+    monkeypatch.setattr(storage, "DATABASE_PATH", db_path)
+
+    client = TestClient(app)
+    created_site = client.post(
+        "/api/sites",
+        json={
+            "url": "example.com",
+            "name": "Example",
+        },
+    ).json()
+
+    update_response = client.patch(
+        f"/api/sites/{created_site['id']}",
+        json={"name": "  Docs Site  "},
+    )
+
+    assert update_response.status_code == 200
+    updated_site = update_response.json()
+    assert updated_site["id"] == created_site["id"]
+    assert updated_site["name"] == "Docs Site"
+    assert updated_site["url"] == created_site["url"]
+    assert updated_site["normalized_url"] == created_site["normalized_url"]
+    assert updated_site["hostname"] == created_site["hostname"]
+    assert updated_site["created_at"] == created_site["created_at"]
+
+
+def test_saved_sites_endpoint_clears_name(monkeypatch, tmp_path):
+    db_path = tmp_path / "sites.db"
+    monkeypatch.setattr(storage, "DATABASE_PATH", db_path)
+
+    client = TestClient(app)
+    created_site = client.post(
+        "/api/sites",
+        json={
+            "url": "example.com",
+            "name": "Example",
+        },
+    ).json()
+
+    update_response = client.patch(
+        f"/api/sites/{created_site['id']}",
+        json={"name": "   "},
+    )
+
+    assert update_response.status_code == 200
+    assert update_response.json()["name"] is None
+
+
+def test_saved_sites_endpoint_update_missing_site_returns_404(monkeypatch, tmp_path):
+    db_path = tmp_path / "sites.db"
+    monkeypatch.setattr(storage, "DATABASE_PATH", db_path)
+
+    client = TestClient(app)
+    response = client.patch("/api/sites/999", json={"name": "Missing"})
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "detail": "Saved site not found.",
+    }
+
+
 def test_check_all_saved_sites_returns_empty_summary(monkeypatch, tmp_path):
     db_path = tmp_path / "sites.db"
     monkeypatch.setattr(storage, "DATABASE_PATH", db_path)
