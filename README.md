@@ -19,11 +19,12 @@ Completed so far:
 * Response time measurement
 * SQLite-backed check history
 * `GET /api/history` endpoint
+* Basic React frontend website check form
 * Pytest coverage for URL normalization, SQLite storage, and API history behavior
 
 Next planned milestone:
 
-* Build a basic React frontend interface for running website checks
+* Display saved check history in the React frontend
 
 ## Features
 
@@ -36,6 +37,10 @@ Currently implemented:
 * `GET /api/history` endpoint for viewing recent saved checks
 
 * Optional history limit using `GET /api/history?limit=2`
+
+* React frontend form for submitting website checks
+
+* Frontend result card for availability, response time, DNS/IP details, redirect target, timestamp, and errors
 
 * Automatic URL normalization
 
@@ -62,9 +67,6 @@ Currently implemented:
 
 Planned features:
 
-* React frontend dashboard
-* Website check form
-* Result card UI
 * History table
 * Screenshots
 * Deployment notes
@@ -125,6 +127,45 @@ FastAPI docs are available at:
 
 ```text
 http://127.0.0.1:8000/docs
+```
+
+## Frontend Setup
+
+From the project root:
+
+```powershell
+cd frontend
+npm install
+```
+
+Run the frontend dev server:
+
+```powershell
+npm run dev
+```
+
+The frontend will run at the URL shown by Vite, usually:
+
+```text
+http://127.0.0.1:5173
+```
+
+The backend must also be running at:
+
+```text
+http://127.0.0.1:8000
+```
+
+The website check form sends requests to:
+
+```text
+POST http://127.0.0.1:8000/api/check
+```
+
+Build the frontend:
+
+```powershell
+npm run build
 ```
 
 ## Running Tests
@@ -250,7 +291,7 @@ Milestone order:
 1. Backend scaffold
 2. Website check endpoint
 3. SQLite history storage
-4. React frontend scaffold
-5. Frontend/backend integration
+4. React frontend website check form
+5. Frontend history display
 6. UI polish and screenshots
 7. Deployment documentation
