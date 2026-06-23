@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from app import storage
 from app.checker import check_website
 
 
@@ -44,4 +45,11 @@ def health_check():
 
 @app.post("/api/check")
 def check_site(request: WebsiteCheckRequest):
-    return check_website(request.url)
+    result = check_website(request.url)
+    storage.save_check_result(result)
+    return result
+
+
+@app.get("/api/history")
+def check_history(limit: int = Query(default=20, ge=1, le=100)):
+    return storage.get_recent_checks(limit)

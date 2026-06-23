@@ -32,6 +32,7 @@ def check_website(url: str) -> dict[str, Any]:
     result: dict[str, Any] = {
         "input_url": url,
         "normalized_url": None,
+        "final_url": None,
         "hostname": None,
         "status_code": None,
         "is_up": False,
@@ -60,6 +61,7 @@ def check_website(url: str) -> dict[str, Any]:
         result["status_code"] = response.status_code
         result["is_up"] = response.is_success
         result["response_time_ms"] = response_time_ms
+        result["final_url"] = str(response.url)
     except Exception as exc:
         result["error"] = str(exc)
 
