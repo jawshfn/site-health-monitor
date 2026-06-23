@@ -3,18 +3,28 @@ import "./App.css";
 
 const CHECK_API_URL = "http://127.0.0.1:8000/api/check";
 const HISTORY_API_URL = "http://127.0.0.1:8000/api/history?limit=10";
+const SITES_API_URL = "http://127.0.0.1:8000/api/sites";
 
 function App() {
   const [url, setUrl] = useState("");
   const [result, setResult] = useState(null);
   const [isChecking, setIsChecking] = useState(false);
   const [message, setMessage] = useState("");
+  const [siteUrl, setSiteUrl] = useState("");
+  const [siteName, setSiteName] = useState("");
+  const [savedSites, setSavedSites] = useState([]);
+  const [isSitesLoading, setIsSitesLoading] = useState(false);
+  const [isSavingSite, setIsSavingSite] = useState(false);
+  const [checkingSiteId, setCheckingSiteId] = useState(null);
+  const [deletingSiteId, setDeletingSiteId] = useState(null);
+  const [sitesMessage, setSitesMessage] = useState("");
   const [history, setHistory] = useState([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyMessage, setHistoryMessage] = useState("");
 
   useEffect(() => {
     loadHistory();
+    loadSavedSites();
   }, []);
 
   async function loadHistory() {
@@ -39,6 +49,130 @@ function App() {
     }
   }
 
+  async function loadSavedSites() {
+    setIsSitesLoading(true);
+    setSitesMessage("");
+
+    try {
+      const response = await fetch(SITES_API_URL);
+
+      if (!response.ok) {
+        throw new Error(`Saved sites request failed with status ${response.status}.`);
+      }
+
+      const data = await response.json();
+      setSavedSites(data);
+    } catch (error) {
+      setSitesMessage(
+        "Could not load saved sites. Make sure the backend is running at http://127.0.0.1:8000."
+      );
+    } finally {
+      setIsSitesLoading(false);
+    }
+  }
+
+  async function saveSite(event) {
+    event.preventDefault();
+
+    const trimmedUrl = siteUrl.trim();
+    const trimmedName = siteName.trim();
+
+    if (!trimmedUrl) {
+      setSitesMessage("Enter a website URL before saving a site.");
+      return;
+    }
+
+    setIsSavingSite(true);
+    setSitesMessage("");
+
+    try {
+      const response = await fetch(SITES_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url: trimmedUrl,
+          name: trimmedName || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.detail ?? `Save failed with status ${response.status}.`);
+      }
+
+      setSiteUrl("");
+      setSiteName("");
+      await loadSavedSites();
+    } catch (error) {
+      setSitesMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not save the site. Make sure the backend is running."
+      );
+    } finally {
+      setIsSavingSite(false);
+    }
+  }
+
+  async function checkSavedSite(site) {
+    setCheckingSiteId(site.id);
+    setMessage("");
+    setResult(null);
+
+    try {
+      const data = await checkUrl(site.normalized_url);
+      setResult(data);
+      await loadHistory();
+    } catch (error) {
+      setMessage(
+        "Could not check the saved site. Make sure the backend is running at http://127.0.0.1:8000."
+      );
+    } finally {
+      setCheckingSiteId(null);
+    }
+  }
+
+  async function deleteSavedSite(siteId) {
+    setDeletingSiteId(siteId);
+    setSitesMessage("");
+
+    try {
+      const response = await fetch(`${SITES_API_URL}/${siteId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error(`Delete failed with status ${response.status}.`);
+      }
+
+      setSavedSites((currentSites) => currentSites.filter((site) => site.id !== siteId));
+    } catch (error) {
+      setSitesMessage(
+        "Could not delete the saved site. Make sure the backend is running at http://127.0.0.1:8000."
+      );
+    } finally {
+      setDeletingSiteId(null);
+    }
+  }
+
+  async function checkUrl(urlToCheck) {
+    const response = await fetch(CHECK_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ url: urlToCheck }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Request failed with status ${response.status}.`);
+    }
+
+    return response.json();
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
 
@@ -54,19 +188,7 @@ function App() {
     setResult(null);
 
     try {
-      const response = await fetch(CHECK_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url: trimmedUrl }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}.`);
-      }
-
-      const data = await response.json();
+      const data = await checkUrl(trimmedUrl);
       setResult(data);
       await loadHistory();
     } catch (error) {
@@ -118,6 +240,23 @@ function App() {
         {result && <ResultCard result={result} />}
       </section>
 
+      <SavedSitesSection
+        siteUrl={siteUrl}
+        siteName={siteName}
+        sites={savedSites}
+        isLoading={isSitesLoading}
+        isSaving={isSavingSite}
+        checkingSiteId={checkingSiteId}
+        deletingSiteId={deletingSiteId}
+        message={sitesMessage}
+        onSiteUrlChange={setSiteUrl}
+        onSiteNameChange={setSiteName}
+        onSave={saveSite}
+        onRefresh={loadSavedSites}
+        onCheck={checkSavedSite}
+        onDelete={deleteSavedSite}
+      />
+
       <HistorySection
         history={history}
         isLoading={isHistoryLoading}
@@ -125,6 +264,119 @@ function App() {
         onRefresh={loadHistory}
       />
     </main>
+  );
+}
+
+function SavedSitesSection({
+  siteUrl,
+  siteName,
+  sites,
+  isLoading,
+  isSaving,
+  checkingSiteId,
+  deletingSiteId,
+  message,
+  onSiteUrlChange,
+  onSiteNameChange,
+  onSave,
+  onRefresh,
+  onCheck,
+  onDelete,
+}) {
+  return (
+    <section className="sites-panel" aria-label="Saved monitored sites">
+      <div className="history-header">
+        <div>
+          <p className="section-label">Watchlist</p>
+          <h2>Saved Sites</h2>
+        </div>
+        <button type="button" className="secondary-button" onClick={onRefresh} disabled={isLoading}>
+          {isLoading ? "Refreshing..." : "Refresh Sites"}
+        </button>
+      </div>
+
+      <form onSubmit={onSave} className="saved-site-form">
+        <div className="site-form-field">
+          <label htmlFor="site-url">Site URL</label>
+          <input
+            id="site-url"
+            type="text"
+            value={siteUrl}
+            onChange={(event) => onSiteUrlChange(event.target.value)}
+            placeholder="example.com"
+            disabled={isSaving}
+          />
+        </div>
+        <div className="site-form-field">
+          <label htmlFor="site-name">Friendly name</label>
+          <input
+            id="site-name"
+            type="text"
+            value={siteName}
+            onChange={(event) => onSiteNameChange(event.target.value)}
+            placeholder="Example"
+            disabled={isSaving}
+          />
+        </div>
+        <button type="submit" disabled={isSaving}>
+          {isSaving ? "Saving..." : "Save Site"}
+        </button>
+      </form>
+
+      {isLoading && <p className="status-message">Loading saved sites...</p>}
+      {message && <p className="error-message">{message}</p>}
+      {!isLoading && !message && sites.length === 0 && (
+        <p className="empty-message">No saved sites yet.</p>
+      )}
+      {sites.length > 0 && (
+        <div className="site-list">
+          {sites.map((site) => (
+            <SavedSiteCard
+              key={site.id}
+              site={site}
+              isChecking={checkingSiteId === site.id}
+              isDeleting={deletingSiteId === site.id}
+              onCheck={onCheck}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SavedSiteCard({ site, isChecking, isDeleting, onCheck, onDelete }) {
+  return (
+    <article className="site-card">
+      <div className="site-card-main">
+        <h3>{site.name || site.hostname}</h3>
+        <p className="site-url">{site.normalized_url}</p>
+        <dl className="site-meta">
+          <div>
+            <dt>Host</dt>
+            <dd>{site.hostname}</dd>
+          </div>
+          <div>
+            <dt>Created</dt>
+            <dd>{formatDate(site.created_at) ?? "Not available"}</dd>
+          </div>
+        </dl>
+      </div>
+      <div className="site-actions">
+        <button type="button" onClick={() => onCheck(site)} disabled={isChecking || isDeleting}>
+          {isChecking ? "Checking..." : "Check Site"}
+        </button>
+        <button
+          type="button"
+          className="danger-button"
+          onClick={() => onDelete(site.id)}
+          disabled={isChecking || isDeleting}
+        >
+          {isDeleting ? "Deleting..." : "Delete"}
+        </button>
+      </div>
+    </article>
   );
 }
 

@@ -62,7 +62,8 @@ h1 {
 }
 
 .checker-panel,
-.history-panel {
+.history-panel,
+.sites-panel {
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid #d9e1ea;
   border-radius: 8px;
@@ -70,11 +71,13 @@ h1 {
   padding: 26px;
 }
 
-.history-panel {
+.history-panel,
+.sites-panel {
   margin-top: 24px;
 }
 
-.check-form label {
+.check-form label,
+.saved-site-form label {
   color: #111827;
   display: block;
   font-weight: 800;
@@ -154,6 +157,17 @@ button:disabled {
   border-color: #aebccd;
 }
 
+.danger-button {
+  background: #fff7f7;
+  border-color: #efb4b4;
+  color: #9d2525;
+}
+
+.danger-button:hover:not(:disabled) {
+  background: #ffe5e5;
+  border-color: #df8f8f;
+}
+
 .status-message,
 .error-message,
 .empty-message {
@@ -187,6 +201,73 @@ button:disabled {
 
 .result-down {
   border-left-color: #b4232d;
+}
+
+.saved-site-form {
+  align-items: end;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto;
+  margin-bottom: 18px;
+  padding: 16px;
+}
+
+.site-form-field {
+  min-width: 0;
+}
+
+.site-list {
+  display: grid;
+  gap: 14px;
+}
+
+.site-card {
+  align-items: start;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 18px;
+}
+
+.site-card h3 {
+  color: #111827;
+  font-size: 1.08rem;
+  margin: 0 0 6px;
+  overflow-wrap: anywhere;
+}
+
+.site-url {
+  color: #1f6f78;
+  font-weight: 800;
+  margin: 0 0 12px;
+  overflow-wrap: anywhere;
+}
+
+.site-meta {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.site-meta div {
+  min-width: 0;
+}
+
+.site-meta dt {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.site-actions {
+  display: flex;
+  gap: 10px;
 }
 
 .result-header,
@@ -364,13 +445,17 @@ dd {
   }
 
   .checker-panel,
-  .history-panel {
+  .history-panel,
+  .sites-panel {
     padding: 18px;
   }
 
   .form-row,
   .result-row,
-  .result-summary {
+  .result-summary,
+  .saved-site-form,
+  .site-card,
+  .site-meta {
     grid-template-columns: 1fr;
   }
 
@@ -385,6 +470,10 @@ dd {
   .result-header,
   .history-header {
     align-items: stretch;
+    flex-direction: column;
+  }
+
+  .site-actions {
     flex-direction: column;
   }
 

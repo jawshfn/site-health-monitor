@@ -78,7 +78,12 @@ def save_check_result(result: dict[str, Any], db_path: Path | str | None = None)
                 result.get("checked_at"),
             ),
         )
-        return int(cursor.lastrowid)
+        created_id = cursor.lastrowid
+
+        if created_id is None:
+            raise RuntimeError("Failed to save website check result.")
+
+        return created_id
 
 
 def get_recent_checks(
@@ -140,13 +145,18 @@ def create_saved_site(
             """,
             (name, url, normalized_url, hostname, created_at),
         )
+        created_id = cursor.lastrowid
+
+        if created_id is None:
+            raise RuntimeError("Failed to create saved site.")
+
         row = connection.execute(
             """
             SELECT id, name, url, normalized_url, hostname, created_at
             FROM saved_sites
             WHERE id = ?
             """,
-            (cursor.lastrowid,),
+            (created_id,),
         ).fetchone()
 
     return dict(row)

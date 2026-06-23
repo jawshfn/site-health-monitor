@@ -105,6 +105,7 @@ def test_delete_saved_site(tmp_path):
     deleted_site = storage.delete_saved_site(site["id"], db_path)
     sites = storage.get_saved_sites(db_path)
 
+    assert deleted_site is not None
     assert deleted_site["id"] == site["id"]
     assert sites == []
     assert storage.delete_saved_site(site["id"], db_path) is None
