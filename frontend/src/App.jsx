@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import "./App.css";
 
 const CHECK_API_URL = "http://127.0.0.1:8000/api/check";
-const HISTORY_API_URL = "http://127.0.0.1:8000/api/history?limit=10";
+const HISTORY_API_URL = "http://127.0.0.1:8000/api/history";
+const HISTORY_PAGE_SIZE = 10;
 const CLEAR_HISTORY_API_URL = "http://127.0.0.1:8000/api/history";
 const SITES_API_URL = "http://127.0.0.1:8000/api/sites";
 const CHECK_ALL_API_URL = "http://127.0.0.1:8000/api/sites/check-all";
@@ -24,7 +25,10 @@ function App() {
   const [checkAllMessage, setCheckAllMessage] = useState("");
   const [sitesMessage, setSitesMessage] = useState("");
   const [history, setHistory] = useState([]);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [hasMoreHistory, setHasMoreHistory] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [isLoadingMoreHistory, setIsLoadingMoreHistory] = useState(false);
   const [isClearingHistory, setIsClearingHistory] = useState(false);
   const [historyMessage, setHistoryMessage] = useState("");
   const [historyNotice, setHistoryNotice] = useState("");
@@ -34,26 +38,35 @@ function App() {
     loadSavedSites();
   }, []);
 
-  async function loadHistory() {
-    setIsHistoryLoading(true);
+  async function loadHistory({ offset = 0, append = false } = {}) {
+    if (append) {
+      setIsLoadingMoreHistory(true);
+    } else {
+      setIsHistoryLoading(true);
+    }
     setHistoryMessage("");
     setHistoryNotice("");
 
     try {
-      const response = await fetch(HISTORY_API_URL);
+      const response = await fetch(
+        `${HISTORY_API_URL}?limit=${HISTORY_PAGE_SIZE}&offset=${offset}`
+      );
 
       if (!response.ok) {
         throw new Error(`History request failed with status ${response.status}.`);
       }
 
       const data = await response.json();
-      setHistory(data);
+      setHistory((currentHistory) => (append ? [...currentHistory, ...data.items] : data.items));
+      setHistoryTotal(data.total);
+      setHasMoreHistory(data.has_more);
     } catch (error) {
       setHistoryMessage(
         "Could not load recent history. Make sure the backend is running at http://127.0.0.1:8000."
       );
     } finally {
       setIsHistoryLoading(false);
+      setIsLoadingMoreHistory(false);
     }
   }
 
@@ -82,6 +95,8 @@ function App() {
 
       const data = await response.json();
       setHistory([]);
+      setHistoryTotal(0);
+      setHasMoreHistory(false);
       setHistoryNotice(`Cleared ${data.deleted_count} saved check results.`);
     } catch (error) {
       setHistoryMessage(
@@ -343,11 +358,15 @@ function App() {
 
       <HistorySection
         history={history}
+        total={historyTotal}
+        hasMore={hasMoreHistory}
         isLoading={isHistoryLoading}
+        isLoadingMore={isLoadingMoreHistory}
         isClearing={isClearingHistory}
         message={historyMessage}
         notice={historyNotice}
         onRefresh={loadHistory}
+        onLoadMore={() => loadHistory({ offset: history.length, append: true })}
         onClear={clearHistory}
       />
     </main>
@@ -561,7 +580,19 @@ function ResultCard({ result }) {
   );
 }
 
-function HistorySection({ history, isLoading, isClearing, message, notice, onRefresh, onClear }) {
+function HistorySection({
+  history,
+  total,
+  hasMore,
+  isLoading,
+  isLoadingMore,
+  isClearing,
+  message,
+  notice,
+  onRefresh,
+  onLoadMore,
+  onClear,
+}) {
   return (
     <section className="history-panel" aria-label="Recent check history">
       <div className="history-header">
@@ -585,7 +616,24 @@ function HistorySection({ history, isLoading, isClearing, message, notice, onRef
       {!isLoading && !message && history.length === 0 && (
         <p className="empty-message">No saved checks yet.</p>
       )}
-      {!message && history.length > 0 && <HistoryTable history={history} />}
+      {!message && history.length > 0 && (
+        <>
+          <p className="history-count">
+            Showing {history.length} of {total} checks
+          </p>
+          <HistoryTable history={history} />
+          {hasMore && (
+            <button
+              type="button"
+              className="load-more-button secondary-button"
+              onClick={onLoadMore}
+              disabled={isLoadingMore || isLoading || isClearing}
+            >
+              {isLoadingMore ? "Loading..." : "Load More"}
+            </button>
+          )}
+        </>
+      )}
     </section>
   );
 }

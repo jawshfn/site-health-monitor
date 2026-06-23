@@ -67,6 +67,34 @@ def test_get_recent_checks_respects_limit(tmp_path):
     assert checks[1]["input_url"] == "example-1.com"
 
 
+def test_get_recent_checks_respects_offset_and_counts_total(tmp_path):
+    db_path = tmp_path / "history.db"
+
+    for index in range(4):
+        storage.save_check_result(
+            {
+                "input_url": f"example-{index}.com",
+                "normalized_url": f"https://example-{index}.com",
+                "final_url": f"https://example-{index}.com",
+                "hostname": f"example-{index}.com",
+                "status_code": 200,
+                "is_up": True,
+                "response_time_ms": 100 + index,
+                "ip_addresses": [],
+                "checked_at": f"2026-06-23T12:0{index}:00+00:00",
+                "error": None,
+            },
+            db_path,
+        )
+
+    checks = storage.get_recent_checks(limit=2, offset=1, db_path=db_path)
+
+    assert storage.count_check_history(db_path) == 4
+    assert len(checks) == 2
+    assert checks[0]["input_url"] == "example-2.com"
+    assert checks[1]["input_url"] == "example-1.com"
+
+
 def test_clear_check_history_removes_checks_but_keeps_saved_sites(tmp_path):
     db_path = tmp_path / "history.db"
     storage.save_check_result(

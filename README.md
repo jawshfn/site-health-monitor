@@ -19,6 +19,7 @@ Completed so far:
 * Response time measurement
 * SQLite-backed check history
 * `GET /api/history` endpoint
+* Paginated check history with load-more support
 * Clear Check History endpoint and frontend action
 * Saved monitored sites/watchlist backend endpoints
 * Backend check-all endpoint for saved monitored sites
@@ -43,9 +44,9 @@ Currently implemented:
 
 * `GET /api/history` endpoint for viewing recent saved checks
 
-* `DELETE /api/history` endpoint for clearing saved check history without deleting saved monitored sites
+* Paginated history using `GET /api/history?limit=10&offset=0`
 
-* Optional history limit using `GET /api/history?limit=2`
+* `DELETE /api/history` endpoint for clearing saved check history without deleting saved monitored sites
 
 * Saved monitored sites API
 
@@ -64,7 +65,9 @@ Currently implemented:
 
 * Frontend result card for availability, response time, DNS/IP details, redirect target, timestamp, and errors
 
-* Frontend recent history table loaded from `GET /api/history?limit=10`
+* Frontend recent history table loaded from `GET /api/history?limit=10&offset=0`
+
+* Frontend Load More button for viewing older saved check history
 
 * Frontend Clear History action with confirmation
 
@@ -97,8 +100,7 @@ Currently implemented:
 
 Planned features:
 
-* Screenshots
-* Deployment notes
+* 
 
 ## Tech Stack
 
@@ -195,7 +197,7 @@ POST http://127.0.0.1:8000/api/check
 The recent history table loads saved checks from:
 
 ```text
-GET http://127.0.0.1:8000/api/history?limit=10
+GET http://127.0.0.1:8000/api/history?limit=10&offset=0
 ```
 
 The saved-sites/watchlist section loads monitored sites from:
@@ -276,40 +278,46 @@ GET /api/history
 Example response:
 
 ```json
-[
-  {
-    "id": 2,
-    "input_url": "https://github.com",
-    "normalized_url": "https://github.com",
-    "final_url": "https://github.com",
-    "hostname": "github.com",
-    "is_up": true,
-    "status_code": 200,
-    "response_time_ms": 428,
-    "ip_addresses": ["140.82.112.3"],
-    "error": null,
-    "checked_at": "2026-06-23T17:35:08.709483+00:00"
-  },
-  {
-    "id": 1,
-    "input_url": "https://example.com",
-    "normalized_url": "https://example.com",
-    "final_url": "https://example.com",
-    "hostname": "example.com",
-    "is_up": true,
-    "status_code": 200,
-    "response_time_ms": 399,
-    "ip_addresses": ["104.20.23.154", "172.66.147.243"],
-    "error": null,
-    "checked_at": "2026-06-23T17:34:17.589642+00:00"
-  }
-]
+{
+  "items": [
+    {
+      "id": 2,
+      "input_url": "https://github.com",
+      "normalized_url": "https://github.com",
+      "final_url": "https://github.com",
+      "hostname": "github.com",
+      "is_up": true,
+      "status_code": 200,
+      "response_time_ms": 428,
+      "ip_addresses": ["140.82.112.3"],
+      "error": null,
+      "checked_at": "2026-06-23T17:35:08.709483+00:00"
+    },
+    {
+      "id": 1,
+      "input_url": "https://example.com",
+      "normalized_url": "https://example.com",
+      "final_url": "https://example.com",
+      "hostname": "example.com",
+      "is_up": true,
+      "status_code": 200,
+      "response_time_ms": 399,
+      "ip_addresses": ["104.20.23.154", "172.66.147.243"],
+      "error": null,
+      "checked_at": "2026-06-23T17:34:17.589642+00:00"
+    }
+  ],
+  "total": 37,
+  "limit": 10,
+  "offset": 0,
+  "has_more": true
+}
 ```
 
-Limit the number of history results:
+Limit and page through history results:
 
 ```text
-GET /api/history?limit=2
+GET /api/history?limit=10&offset=10
 ```
 
 Clear saved check history:
@@ -469,5 +477,7 @@ Milestone order:
 9. Backend check-all saved sites API
 10. Frontend Check All Saved Sites button and dashboard summary
 11. Clear Check History
-12. Screenshots
-13. Deployment documentation
+12. Load More Check History
+
+xx. Screenshots
+xx. Deployment documentation

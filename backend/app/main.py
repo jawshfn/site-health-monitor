@@ -55,8 +55,20 @@ def check_site(request: WebsiteCheckRequest):
 
 
 @app.get("/api/history")
-def check_history(limit: int = Query(default=20, ge=1, le=100)):
-    return storage.get_recent_checks(limit)
+def check_history(
+    limit: int = Query(default=10, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+):
+    items = storage.get_recent_checks(limit=limit, offset=offset)
+    total = storage.count_check_history()
+
+    return {
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "has_more": offset + len(items) < total,
+    }
 
 
 @app.delete("/api/history")

@@ -88,6 +88,7 @@ def save_check_result(result: dict[str, Any], db_path: Path | str | None = None)
 
 def get_recent_checks(
     limit: int = 20,
+    offset: int = 0,
     db_path: Path | str | None = None,
 ) -> list[dict[str, Any]]:
     initialize_database(db_path)
@@ -112,11 +113,22 @@ def get_recent_checks(
             FROM website_checks
             ORDER BY id DESC
             LIMIT ?
+            OFFSET ?
             """,
-            (limit,),
+            (limit, offset),
         ).fetchall()
 
     return [_row_to_dict(row) for row in rows]
+
+
+def count_check_history(db_path: Path | str | None = None) -> int:
+    initialize_database(db_path)
+    path = _get_database_path(db_path)
+
+    with sqlite3.connect(path) as connection:
+        count = connection.execute("SELECT COUNT(*) FROM website_checks").fetchone()[0]
+
+    return int(count)
 
 
 def clear_check_history(db_path: Path | str | None = None) -> int:

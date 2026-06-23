@@ -483,6 +483,16 @@ dd {
   overflow-x: auto;
 }
 
+.history-count {
+  color: #526176;
+  font-weight: 800;
+  margin: 0 0 12px;
+}
+
+.load-more-button {
+  margin-top: 16px;
+}
+
 .history-table {
   border-collapse: collapse;
   min-width: 900px;
