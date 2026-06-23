@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,18 @@ def initialize_database(db_path: Path | str | None = None) -> None:
                 ip_addresses TEXT NOT NULL,
                 error TEXT,
                 checked_at TEXT NOT NULL
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS saved_sites (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT,
+                url TEXT NOT NULL,
+                normalized_url TEXT NOT NULL,
+                hostname TEXT NOT NULL,
+                created_at TEXT NOT NULL
             )
             """
         )
@@ -99,6 +112,93 @@ def get_recent_checks(
         ).fetchall()
 
     return [_row_to_dict(row) for row in rows]
+
+
+def create_saved_site(
+    url: str,
+    normalized_url: str,
+    hostname: str,
+    name: str | None = None,
+    db_path: Path | str | None = None,
+) -> dict[str, Any]:
+    initialize_database(db_path)
+    path = _get_database_path(db_path)
+    created_at = datetime.now(timezone.utc).isoformat()
+
+    with sqlite3.connect(path) as connection:
+        connection.row_factory = sqlite3.Row
+        cursor = connection.execute(
+            """
+            INSERT INTO saved_sites (
+                name,
+                url,
+                normalized_url,
+                hostname,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (name, url, normalized_url, hostname, created_at),
+        )
+        row = connection.execute(
+            """
+            SELECT id, name, url, normalized_url, hostname, created_at
+            FROM saved_sites
+            WHERE id = ?
+            """,
+            (cursor.lastrowid,),
+        ).fetchone()
+
+    return dict(row)
+
+
+def get_saved_sites(db_path: Path | str | None = None) -> list[dict[str, Any]]:
+    initialize_database(db_path)
+    path = _get_database_path(db_path)
+
+    with sqlite3.connect(path) as connection:
+        connection.row_factory = sqlite3.Row
+        rows = connection.execute(
+            """
+            SELECT id, name, url, normalized_url, hostname, created_at
+            FROM saved_sites
+            ORDER BY id DESC
+            """
+        ).fetchall()
+
+    return [dict(row) for row in rows]
+
+
+def delete_saved_site(
+    site_id: int,
+    db_path: Path | str | None = None,
+) -> dict[str, Any] | None:
+    initialize_database(db_path)
+    path = _get_database_path(db_path)
+
+    with sqlite3.connect(path) as connection:
+        connection.row_factory = sqlite3.Row
+        row = connection.execute(
+            """
+            SELECT id, name, url, normalized_url, hostname, created_at
+            FROM saved_sites
+            WHERE id = ?
+            """,
+            (site_id,),
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        connection.execute(
+            """
+            DELETE FROM saved_sites
+            WHERE id = ?
+            """,
+            (site_id,),
+        )
+
+    return dict(row)
 
 
 def _get_database_path(db_path: Path | str | None) -> Path:

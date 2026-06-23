@@ -65,3 +65,46 @@ def test_get_recent_checks_respects_limit(tmp_path):
     assert len(checks) == 2
     assert checks[0]["input_url"] == "example-2.com"
     assert checks[1]["input_url"] == "example-1.com"
+
+
+def test_create_and_list_saved_sites(tmp_path):
+    db_path = tmp_path / "sites.db"
+
+    first_site = storage.create_saved_site(
+        url="example.com",
+        normalized_url="https://example.com",
+        hostname="example.com",
+        name="Example",
+        db_path=db_path,
+    )
+    second_site = storage.create_saved_site(
+        url="https://github.com",
+        normalized_url="https://github.com",
+        hostname="github.com",
+        db_path=db_path,
+    )
+
+    sites = storage.get_saved_sites(db_path)
+
+    assert second_site["id"] > first_site["id"]
+    assert [site["id"] for site in sites] == [second_site["id"], first_site["id"]]
+    assert sites[0]["name"] is None
+    assert sites[0]["hostname"] == "github.com"
+    assert sites[1]["name"] == "Example"
+
+
+def test_delete_saved_site(tmp_path):
+    db_path = tmp_path / "sites.db"
+    site = storage.create_saved_site(
+        url="example.com",
+        normalized_url="https://example.com",
+        hostname="example.com",
+        db_path=db_path,
+    )
+
+    deleted_site = storage.delete_saved_site(site["id"], db_path)
+    sites = storage.get_saved_sites(db_path)
+
+    assert deleted_site["id"] == site["id"]
+    assert sites == []
+    assert storage.delete_saved_site(site["id"], db_path) is None

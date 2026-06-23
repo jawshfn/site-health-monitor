@@ -19,6 +19,7 @@ Completed so far:
 * Response time measurement
 * SQLite-backed check history
 * `GET /api/history` endpoint
+* Saved monitored sites/watchlist backend endpoints
 * Basic React frontend website check form
 * React frontend recent history display
 * Polished React frontend layout for readability and responsiveness
@@ -26,7 +27,7 @@ Completed so far:
 
 Next planned milestone:
 
-* Add screenshots to the README
+* Add saved-sites/watchlist UI to the React frontend
 
 ## Features
 
@@ -39,6 +40,12 @@ Currently implemented:
 * `GET /api/history` endpoint for viewing recent saved checks
 
 * Optional history limit using `GET /api/history?limit=2`
+
+* Saved monitored sites API
+
+  * `GET /api/sites`
+  * `POST /api/sites`
+  * `DELETE /api/sites/{site_id}`
 
 * React frontend form for submitting website checks
 
@@ -75,6 +82,7 @@ Currently implemented:
 
 Planned features:
 
+* Frontend saved-sites/watchlist UI
 * Screenshots
 * Deployment notes
 
@@ -282,6 +290,73 @@ Limit the number of history results:
 GET /api/history?limit=2
 ```
 
+### Saved monitored sites
+
+```text
+GET /api/sites
+```
+
+Example response:
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Example",
+    "url": "example.com",
+    "normalized_url": "https://example.com",
+    "hostname": "example.com",
+    "created_at": "2026-06-23T18:45:00.000000+00:00"
+  }
+]
+```
+
+```text
+POST /api/sites
+```
+
+Example request:
+
+```json
+{
+  "name": "Example",
+  "url": "example.com"
+}
+```
+
+Example response:
+
+```json
+{
+  "id": 1,
+  "name": "Example",
+  "url": "example.com",
+  "normalized_url": "https://example.com",
+  "hostname": "example.com",
+  "created_at": "2026-06-23T18:45:00.000000+00:00"
+}
+```
+
+```text
+DELETE /api/sites/1
+```
+
+Example response:
+
+```json
+{
+  "deleted": true,
+  "site": {
+    "id": 1,
+    "name": "Example",
+    "url": "example.com",
+    "normalized_url": "https://example.com",
+    "hostname": "example.com",
+    "created_at": "2026-06-23T18:45:00.000000+00:00"
+  }
+}
+```
+
 ## Local Data
 
 Website check history is stored locally in a SQLite database.
@@ -307,5 +382,8 @@ Milestone order:
 3. SQLite history storage
 4. React frontend website check form
 5. Frontend history display
-6. UI polish and screenshots
-7. Deployment documentation
+6. UI polish
+7. Backend saved-sites/watchlist API
+8. Frontend saved-sites/watchlist UI
+9. Screenshots
+10. Deployment documentation
