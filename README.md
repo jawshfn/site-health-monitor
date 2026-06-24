@@ -112,7 +112,7 @@ For a custom deployed backend, build the frontend with `VITE_API_BASE_URL` set t
 Run the backend tests from the `backend/` folder:
 
 ```powershell
-python -m pytest
+.\.venv\Scripts\python.exe -m pytest
 ```
 
 Build the frontend from the `frontend/` folder:
